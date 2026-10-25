@@ -1,50 +1,46 @@
-# AudioForge Local — Releases e roadmap
+# AudioForge Local v0.2.1 — Smart Startup & Guided Tour
 
-## v0.2.0 — Media Downloader (2026-10-25)
+**Tag:** `v0.2.1`  
+**Commit:** `feat: add single-instance startup and guided onboarding (v0.2.1)`  
+**Release title:** `AudioForge Local v0.2.1 — Smart Startup & Guided Tour`
 
-**Release title:** `AudioForge Local v0.2.0 — Media Downloader`  
-**Tag:** `v0.2.0`  
-**Commit:** `feat: add MP3 and MP4 exports and safe shutdown (v0.2.0)`
+## ✨ Novidades
 
-### ✨ Novidades
+- **Instância única:** clicar duas vezes no atalho não cria dois servidores Python. Se houver um AudioForge v0.2.1 aberto, outro clique reutiliza a instância, abrindo a interface no navegador.
+- **Proteção de porta:** quando a porta configurada estiver ocupada por um processo não reconhecido (inclusive versão anterior do app), não se conecta automaticamente a esse processo e mostra mensagem de diagnóstico.
+- **Inicializador leve:** `launcher.py` verifica bloqueio/instância antes de carregar a interface Gradio; funciona tanto via `start.sh` quanto por `python app.py`.
+- **Tutorial guiado em 7 etapas:** navegar com **Anterior / Próximo / Pular**, ver destaque da área atual e visitar a aba Histórico automaticamente.
+- **Tutorial na primeira execução:** conclusão ou pulo lembrados no computador. É possível reabrir pelo botão **Abrir tutorial guiado**.
+- **Log pelo menu:** mensagens de inicialização ficam em `~/.cache/audioforge-local/launcher.log` quando não há terminal visível.
+- **Compatibilidade:** mesmas dependências e mesma pasta de downloads/histórico da v0.2.0.
 
-- **MP3 original:** download direto do áudio e conversão pelo FFmpeg em 192 kbps.
-- **MP4 original:** download de vídeo com áudio via yt-dlp, com preferência por formatos compatíveis com MP4; também converte vídeos locais.
-- **WAV preservado:** mantém o conversor original do script Python e os recursos da v0.1.0.
-- **Formatos combináveis:** WAV, MP3 e MP4 no mesmo processamento; sem downloads duplicados quando MP4 + áudio são escolhidos.
-- **Players separados:** áudio original, vídeo MP4, instrumental e vocal.
-- **Histórico compatível:** pode reabrir os arquivos da v0.1.0 e os novos vídeos/MP3s.
-- **Encerramento pela interface:** botão com confirmação dupla e bloqueio enquanto existe processamento ativo.
-- **Melhoria de armazenamento:** remove o WAV temporário da IA caso WAV não seja pedido; não apaga resultados anteriores.
-- **19 testes automatizados:** cobertura dos formatos, histórico, interface, proteção de encerramento e conversões FFmpeg pequenas.
+## ✅ Continua disponível
 
-### ⚠️ Observações
+- Downloads/conversões MP3 (192 kbps), MP4 e WAV.
+- Instrumental e voz separados por Demucs (MP3 + WAV).
+- Transcrição local com faster-whisper (TXT + SRT).
+- Histórico local e players de mídia.
+- Encerramento seguro com confirmação, bloqueado durante trabalhos ativos.
 
-- **MP4 exportado é o vídeo original, NÃO vídeo de karaokê.** O karaokê continua entregando instrumental/voz em áudio.
-- Links do YouTube só funcionam quando acessíveis e cujo download seja permitido; a plataforma pode bloquear links ou não oferecer streams MP4 adequadas.
-- Converter alguns vídeos locais para H.264/AAC pode demorar na CPU.
-- O fechamento da aba do navegador não encerra o servidor; use **Encerrar AudioForge**.
-- Testes de download real por link e processamento de modelos pesados não foram executados no ambiente de desenvolvimento; validar com arquivos e links autorizados no Ubuntu do usuário.
+## 🔄 Atualizar da v0.2.0
 
-### 🚀 Atualização
+1. Encerre a v0.2.0 **pelo botão Encerrar AudioForge** (fechar apenas o Chrome não encerra o Python).
+2. Extraia o ZIP e copie o **conteúdo interno** do pacote para a pasta já instalada, substituindo/mesclando os arquivos e mantendo `.venv/`.
+3. Confira que **`launcher.py`**, **`audioforge/single_instance.py`** e **`audioforge/tutorial.py`** foram copiados.
+4. Abra pelo mesmo atalho do Ubuntu. A versão exibida será **v0.2.1** e o tutorial aparecerá na primeira abertura.
+5. Não é necessário rodar `install.sh` novamente para uma atualização na mesma pasta.
 
-Desligue a versão anterior, sobrescreva/mescle os arquivos na mesma pasta de instalação **sem apagar `.venv`** e execute pelo mesmo atalho. Bibliotecas exigidas não mudaram. Histórico mantido em `~/Downloads/AudioForge-Local`.
+**Dados preservados:** `~/Downloads/AudioForge-Local/` e todos os trabalhos anteriores. Preferência do tutorial: `~/.config/audioforge-local/preferences.json`.
 
-### 🧭 Próximos passos
+## 🧪 Testes e limitações
 
-- `v0.2.1`: correções de compatibilidade com base nos testes reais.
-- `v0.3.0`: filas, cancelamento e seleção de qualidade.
-- `v0.4.0`: geração de **vídeo karaokê MP4** com instrumental e letras.
-- `v0.5.0`: processamento em lote.
+- **23 testes automatizados passaram**, incluindo instância única entre dois processos, detecção de conflito, estado do tutorial, exportações e FFmpeg real.
+- Servidor Gradio aberto por um primeiro processo e reutilizado por outro processo com sucesso; a finalização liberou os arquivos de controle.
+- A navegação visual completa do tutorial não pôde ser validada dentro de um Chrome conectado a esta sessão; teste os botões no seu Ubuntu.
+- A primeira abertura de Demucs/Whisper pode baixar modelos e levar mais tempo. Links do YouTube dependem das restrições da plataforma e de autorização de uso. A versão MP4 corresponde ao vídeo original, não ao karaokê.
 
----
+## 🗺️ Roadmap
 
-## v0.1.0 — First Cut (2026-10-24)
-
-- Primeira interface local em Gradio (`127.0.0.1:7860`).
-- Importação de arquivo local e link compatível via `yt-dlp`.
-- Extração de WAV com FFmpeg, usando abordagem do script original.
-- Separação de instrumental e vocal com Demucs (WAV + MP3).
-- Transcrição com faster-whisper, TXT e SRT.
-- Histórico local persistente, players e botão para abrir pasta de resultados.
-- Instalação para Ubuntu/Linux, atalho de menu e testes básicos.
+- **v0.3.0 — Processing Queue:** fila, cancelamento de tarefas, qualidade de exportação e reprocessamento sem novo download.
+- **v0.4.0 — Karaoke Video:** exportar vídeo MP4 com áudio instrumental e opção de letra/legenda sincronizada.
+- **v0.5.0 — Media Library:** lotes, filtros e coleções locais.

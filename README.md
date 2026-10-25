@@ -2,7 +2,7 @@
 
 **Estúdio pessoal em Python para baixar/converter mídia em WAV, MP3 e MP4, separar voz e instrumental e gerar transcrição.** O aplicativo abre em uma interface visual no navegador, mas o servidor e o processamento ficam **no seu próprio computador**.
 
-**Versão atual:** `v0.2.0 — Media Downloader` · **Plataforma principal:** Ubuntu 22.04+ · **Tecnologias:** Python, Gradio 6, FFmpeg, yt-dlp, Demucs e faster-whisper.
+**Versão atual:** `v0.2.1 — Smart Startup & Guided Tour` · **Plataforma principal:** Ubuntu 22.04+ · **Tecnologias:** Python, Gradio 6, FFmpeg, yt-dlp, Demucs e faster-whisper.
 
 ## ✨ Recursos
 
@@ -14,7 +14,9 @@
 | Separar voz/instrumental | `voz.wav`, `voz.mp3`, `instrumental.wav`, `instrumental.mp3` | Modelos Demucs executados na CPU |
 | Transcrição | `transcricao.txt`, `legendas.srt` | IA faster-whisper na CPU |
 | Histórico | Lista de resultados e players para reabrir | Compatível com o histórico da versão anterior |
-| **Novo: encerrar pela interface** | Para o processo Python local | Confirmação em duas etapas; impede encerrar com tarefa ativa |
+| Encerrar pela interface | Para o processo Python local | Confirmação em duas etapas; impede encerrar com tarefa ativa |
+| **Novo: instância única** | Reabrir a interface pelo mesmo atalho | Evita dois servidores na mesma porta e verifica a instância ativa |
+| **Novo: tutorial guiado** | 7 etapas navegáveis | Passos Anterior/Próximo/Pular; você pode reabrir depois |
 
 Você pode marcar **mais de um formato na mesma tarefa**. Para baixar apenas MP3 ou MP4, **desmarque “Separar voz e instrumental”** se não precisar de karaokê. Escolha a entrada: **arquivo local** ou **link do YouTube para conteúdo autorizado**. O projeto não depende de GitHub Pages, Supabase, conta ou API paga.
 
@@ -31,17 +33,40 @@ Você pode marcar **mais de um formato na mesma tarefa**. Para baixar apenas MP3
 
 Na primeira utilização do Demucs ou do Whisper, seus modelos podem ser baixados pela internet. Bibliotecas de IA e modelos podem exigir vários GB livres. No notebook sem GPU dedicada, use **`tiny` ou `base`** para transcrição; separar instrumentos pode levar vários minutos.
 
-## 🔄 Atualização da v0.1.0 para v0.2.0 (sem reinstalar tudo)
+## 🔄 Atualizar da v0.2.0 para v0.2.1 (sem perder histórico)
 
-**Importante:** encerre o AudioForge antigo antes de substituir qualquer arquivo. Na v0.1.0, se abriu pelo terminal, pressione `Ctrl+C`. Se abriu pelo menu do Ubuntu, feche o processo Python pelo Monitor do Sistema ou reinicie o computador antes de atualizar. **Fechar só a aba do navegador não basta.**
+1. **Encerre primeiro a versão v0.2.0:** no rodapé, clique **Encerrar AudioForge → Sim, encerrar aplicativo**. **Fechar só o Chrome não encerra**. Caso esteja no terminal, pode usar `Ctrl+C`.
+2. Descompacte `audioforge-local-v0.2.1.zip`.
+3. Abra a **pasta onde o AudioForge está instalado**: a que contém `app.py`, `start.sh` e `.venv/`.
+4. Copie **o conteúdo INTERNO** da pasta extraída `audioforge-local-v0.2.1` para **dentro** da pasta já instalada, mesclando as subpastas e substituindo os arquivos com mesmo nome. Isso inclui os novos **`launcher.py` e `audioforge/single_instance.py` e `audioforge/tutorial.py`**.
+5. **Não apague `.venv/`** e **não apague `~/Downloads/AudioForge-Local/`**. Não é preciso rodar `install.sh` novamente, pois não alteramos as bibliotecas.
+6. Abra **AudioForge Local** pelo mesmo atalho do menu do Ubuntu. Confirme a indicação **v0.2.1** na parte superior.
 
-1. Descompacte o ZIP da v0.2.0.
-2. Abra a **pasta de instalação antiga** — aquela onde estão `app.py`, `start.sh` e `.venv`.
-3. Copie **o conteúdo interno** do pacote novo (arquivos e subpastas) para a pasta antiga; confirme **substituir/mesclar arquivos**. **Não apague `.venv`.**
-4. Abra o AudioForge pelo mesmo atalho do Ubuntu; o projeto usa as **mesmas dependências** da v0.1.0, então **não precisa executar `install.sh` novamente** se a instalação anterior estava funcionando.
-5. Veja `v0.2.0` no topo da interface.
+Se você criou uma pasta de instalação *nova*, e não substituiu a antiga, execute `bash install.sh` na pasta nova para atualizar o atalho; nesse caso há nova instalação de dependências. Para saber para onde o atalho aponta: `grep '^Exec=' ~/.local/share/applications/audioforge-local.desktop`.
 
-Se preferir uma instalação em pasta nova, pode executar `bash install.sh` na nova pasta (reinstala bibliotecas e atualiza o atalho). O histórico é mantido porque fica em outro diretório, não na pasta do projeto.
+**Atenção:** se copiar os arquivos enquanto a v0.2.0 estiver aberta, ela não receberá o bloqueio de instância única retroativamente. Encerre a versão antiga e inicie a nova após copiar.
+
+### Como iniciar no dia a dia
+
+- Procure **AudioForge Local** no menu de aplicativos do Ubuntu, ou clique no mesmo atalho novamente.
+- **Se já estiver aberto, o atalho apenas abre outra aba com a mesma interface** (não inicia outro Python nem baixa modelos novamente).
+- Se tiver fechado somente a aba, clique no atalho para reabrir.
+- Para realmente desligar: **Encerrar AudioForge** no rodapé, ou `Ctrl+C` no terminal que o executa.
+- Se a porta `7860` estiver ocupada por um programa **não reconhecido**, o AudioForge não tentará assumir esse programa: exibirá aviso e deixará instruções no log.
+
+### 🧭 Tutorial guiado
+
+Na **primeira execução da v0.2.1** o tutorial aparece automaticamente, com sete etapas:
+
+1. Selecionar vídeo/áudio ou colar link.
+2. Escolher WAV, MP3 ou MP4.
+3. Ativar (ou desativar) karaokê e transcrição.
+4. Iniciar o processamento.
+5. Ouvir, copiar texto e baixar arquivos.
+6. Reabrir trabalhos no histórico.
+7. Encerrar com segurança.
+
+Use **Próximo →**, **← Anterior** ou **Pular tutorial**. As áreas correspondentes ganham destaque na interface e a aba **Histórico** é selecionada quando você chega à sua etapa. Ao terminar/pular, a preferência fica salva **somente no computador**, em `~/.config/audioforge-local/preferences.json`. O botão **Abrir tutorial guiado**, logo abaixo do cabeçalho, permite refazer a visita quantas vezes quiser.
 
 ## 🧭 Guia rápido
 
@@ -64,7 +89,7 @@ Se preferir uma instalação em pasta nova, pode executar `bash install.sh` na n
 
 ## ⏻ Como encerrar corretamente
 
-**Fechar o Chrome não encerra o AudioForge.** O navegador só exibe a interface; o processo Python continua executando.
+**Fechar o Chrome não encerra o AudioForge.** O navegador só exibe a interface; o processo Python continua executando. Na v0.2.1, clicar no atalho novamente reconhece o processo já aberto e reabre a interface.
 
 - **Abrindo pelo menu do Ubuntu:** role até o rodapé da página → **Encerrar AudioForge** → **Sim, encerrar aplicativo**. O processo é encerrado após mostrar a confirmação, e você pode fechar a aba.
 - **Abrindo por terminal:** pressione `Ctrl+C` no terminal, ou use o mesmo botão de encerramento.
@@ -104,11 +129,14 @@ Um `original.wav` temporário utilizado apenas pela IA é removido após o proce
 | Erro de módulo Python | Na pasta instalada, execute `bash install.sh` |
 | Processamento lento | Vídeos grandes e conversões H.264 consomem CPU. Para transcrição, escolha `tiny`. |
 | Página fecha mas aplicativo ainda ativo | Volte a `http://127.0.0.1:7860` e use **Encerrar AudioForge**; ou `Ctrl+C` no terminal. |
-| Porta 7860 ocupada | Rode `AUDIOFORGE_PORT=7861 bash start.sh` (se estiver iniciando manualmente). |
+| Porta 7860 ocupada | Se for uma **versão antiga**, encerre-a antes de iniciar v0.2.1. Se for outro programa, use `AUDIOFORGE_PORT=7861 bash start.sh` (ainda haverá apenas uma instância AudioForge por usuário). |
+| Clique no atalho e nada apareceu | Consulte `~/.cache/audioforge-local/launcher.log` (inicialização pelo menu gráfico). Em terminal, `bash start.sh` mostra mensagens diretamente. |
+| Interface já estava aberta | Isso é esperado. O novo atalho reabre `http://127.0.0.1:7860` sem criar outro servidor. |
+| Tutorial não aparece | Clique em **Abrir tutorial guiado**. A conclusão anterior é lembrada em `~/.config/audioforge-local/preferences.json`. |
 
 ## 🔐 Limites e privacidade
 
-- A interface usa **`127.0.0.1`**; não é publicada na internet.
+- A interface usa **`127.0.0.1`**; não é publicada na internet. O processo atual mantém apenas um identificador e uma porta de controle **também em `127.0.0.1`**, para a reabertura segura.
 - Arquivos locais e transcrições não são enviados a serviços de IA. Ao usar links, o `yt-dlp` acessa o serviço de origem; modelos de IA podem ser baixados da internet na primeira utilização.
 - O aplicativo não remove DRM nem promete funcionar para vídeos bloqueados, privados ou protegidos. **Use somente conteúdo próprio/licenciado ou com download e processamento autorizados**. Consulte os [Termos do YouTube](https://www.youtube.com/t/terms).
 - **MP4 desta versão é o vídeo original**, não a música instrumental sincronizada em vídeo; isso permanece para uma versão futura.
@@ -116,9 +144,12 @@ Um `original.wav` temporário utilizado apenas pela IA é removido após o proce
 ## 🗂️ Estrutura do projeto
 
 ```text
-app.py                 # Interface, fluxo de progresso e botão de encerramento
+app.py                 # Interface, tutoriais e botão de encerramento
+launcher.py            # Inicialização leve com proteção de instância única
 assets/style.css       # Design
 audioforge/core.py    # Download, FFmpeg, Demucs, Whisper e histórico
+audioforge/single_instance.py # Bloqueio, status e reabertura segura
+audioforge/tutorial.py        # Etapas e preferências locais do tutorial
 audioforge/__init__.py
 install.sh             # Instalação Ubuntu, ambiente virtual e atalho
 start.sh               # Inicialização pelo menu ou terminal
@@ -137,11 +168,11 @@ Com a instalação já feita, rode (opcional):
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Os testes automatizados não acessam YouTube nem baixam modelos de IA. Os novos fluxos MP3/MP4 são testados com simulação de download, mais uma conversão real de arquivos mínimos pelo FFmpeg. Teste também manualmente uma música/vídeo cujo download seja permitido.
+Os testes automatizados não acessam YouTube nem baixam modelos de IA. Nesta versão, há **23 testes automatizados**, incluindo inicialização concorrente em dois processos, identificação de porta ocupada, salvamento do tutorial, conversão real com FFmpeg e teste leve da interface. **A sequência visual dos botões do tutorial ainda deve ser conferida no Chrome do seu Ubuntu**, junto com uma mídia autorizada.
 
 ## 🗺️ Roadmap
 
-- **v0.2.1:** melhorias de compatibilidade/download conforme feedback de uso real.
+- **v0.2.1 (atual):** instância única, reabrir pelo atalho e tutorial guiado.
 - **v0.3.0:** fila, cancelamento seguro, preferências de qualidade e reprocessamento sem baixar novamente.
 - **v0.4.0:** criar **vídeo karaokê MP4** com instrumental e opção de exibir legendas/letra sincronizada.
 - **v0.5.0:** processamento em lote e organização de coleções.

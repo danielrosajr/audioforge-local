@@ -17,6 +17,27 @@
 .af-status p { margin:0 !important; }
 .af-footer { text-align:center; padding:25px 8px 10px; font-size:10px; color:var(--body-text-color-subdued); font-weight:650; letter-spacing:.18em; }
 @media(max-width:750px) { .af-hero {padding:26px 22px;} .af-hero h1 em {display:block;margin-top:7px;} .gradio-container {padding:10px !important;} }
-/* v0.2.0 — encerramento explícito e exports */
+/* v0.2.1 — encerramento, tour e instância única */
 .af-shutdown-area { margin-top: 18px !important; border: 1px solid var(--border-color-primary) !important; border-radius: 16px !important; padding: 15px !important; }
 .af-shutdown-area button { min-width: 185px; }
+
+/* Tour in-page: visible instructions, familiar Previous/Next/Skip controls. */
+.af-tour-panel { border: 1px solid #9374f1 !important; border-radius: 19px !important;
+  background: color-mix(in srgb, #9471fa 7%, var(--block-background-fill)) !important;
+  padding: 19px !important; margin: 9px 0 18px !important;
+  box-shadow: 0 10px 25px rgba(56, 29, 116, .12);
+  position: sticky; top: 10px; z-index: 30; max-height: 44vh; overflow-y: auto; }
+.af-tour-panel .af-tour-description { font-size: 15px; line-height: 1.55; }
+.af-tour-panel button { min-height: 41px; }
+.af-tour-area { border: 2px solid transparent !important; border-radius: 14px;
+  padding: 8px !important; transition: border-color .2s ease, box-shadow .2s ease; scroll-margin-top: 280px; }
+.gradio-container:has(#af-tour-marker-source) #af-guide-source,
+.gradio-container:has(#af-tour-marker-formats) #af-guide-formats,
+.gradio-container:has(#af-tour-marker-ai) #af-guide-ai,
+.gradio-container:has(#af-tour-marker-process) #af-guide-process,
+.gradio-container:has(#af-tour-marker-results) #af-guide-results,
+.gradio-container:has(#af-tour-marker-history) #af-guide-history,
+.gradio-container:has(#af-tour-marker-shutdown) #af-guide-shutdown {
+  border-color: #9676f2 !important; box-shadow: 0 0 0 5px rgba(142, 112, 240, .14);
+}
+@media(max-width: 600px) { .af-tour-panel { padding: 12px !important; max-height: 52vh; } .af-tour-area {scroll-margin-top: 300px;} }

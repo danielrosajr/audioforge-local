@@ -9,4 +9,12 @@ if [ ! -x .venv/bin/python ]; then
   exit 1
 fi
 export PYTHONUNBUFFERED=1
-exec .venv/bin/python app.py
+# Pelo menu gráfico não há terminal para ver erros: salvamos as mensagens no log.
+# Pelo terminal, a saída continua aparecendo normalmente.
+if [ -t 1 ]; then
+  exec .venv/bin/python launcher.py
+else
+  LOG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/audioforge-local"
+  mkdir -p "$LOG_DIR"
+  exec .venv/bin/python launcher.py >> "$LOG_DIR/launcher.log" 2>&1
+fi
