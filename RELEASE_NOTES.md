@@ -1,28 +1,50 @@
-# Release notes
+# AudioForge Local — Releases e roadmap
+
+## v0.2.0 — Media Downloader (2026-10-25)
+
+**Release title:** `AudioForge Local v0.2.0 — Media Downloader`  
+**Tag:** `v0.2.0`  
+**Commit:** `feat: add MP3 and MP4 exports and safe shutdown (v0.2.0)`
+
+### ✨ Novidades
+
+- **MP3 original:** download direto do áudio e conversão pelo FFmpeg em 192 kbps.
+- **MP4 original:** download de vídeo com áudio via yt-dlp, com preferência por formatos compatíveis com MP4; também converte vídeos locais.
+- **WAV preservado:** mantém o conversor original do script Python e os recursos da v0.1.0.
+- **Formatos combináveis:** WAV, MP3 e MP4 no mesmo processamento; sem downloads duplicados quando MP4 + áudio são escolhidos.
+- **Players separados:** áudio original, vídeo MP4, instrumental e vocal.
+- **Histórico compatível:** pode reabrir os arquivos da v0.1.0 e os novos vídeos/MP3s.
+- **Encerramento pela interface:** botão com confirmação dupla e bloqueio enquanto existe processamento ativo.
+- **Melhoria de armazenamento:** remove o WAV temporário da IA caso WAV não seja pedido; não apaga resultados anteriores.
+- **19 testes automatizados:** cobertura dos formatos, histórico, interface, proteção de encerramento e conversões FFmpeg pequenas.
+
+### ⚠️ Observações
+
+- **MP4 exportado é o vídeo original, NÃO vídeo de karaokê.** O karaokê continua entregando instrumental/voz em áudio.
+- Links do YouTube só funcionam quando acessíveis e cujo download seja permitido; a plataforma pode bloquear links ou não oferecer streams MP4 adequadas.
+- Converter alguns vídeos locais para H.264/AAC pode demorar na CPU.
+- O fechamento da aba do navegador não encerra o servidor; use **Encerrar AudioForge**.
+- Testes de download real por link e processamento de modelos pesados não foram executados no ambiente de desenvolvimento; validar com arquivos e links autorizados no Ubuntu do usuário.
+
+### 🚀 Atualização
+
+Desligue a versão anterior, sobrescreva/mescle os arquivos na mesma pasta de instalação **sem apagar `.venv`** e execute pelo mesmo atalho. Bibliotecas exigidas não mudaram. Histórico mantido em `~/Downloads/AudioForge-Local`.
+
+### 🧭 Próximos passos
+
+- `v0.2.1`: correções de compatibilidade com base nos testes reais.
+- `v0.3.0`: filas, cancelamento e seleção de qualidade.
+- `v0.4.0`: geração de **vídeo karaokê MP4** com instrumental e letras.
+- `v0.5.0`: processamento em lote.
+
+---
 
 ## v0.1.0 — First Cut (2026-10-24)
 
-### Funcionalidades
-- Interface local visual feita em Gradio, com execução no navegador (`127.0.0.1:7860`).
-- Importação por arquivo de áudio/vídeo ou link compatível do YouTube, reaproveitando a abordagem `yt_dlp.YoutubeDL` do script original.
-- Extração/conversão automática para `original.wav` usando FFmpeg.
-- Separação de voz e instrumental com Demucs (`htdemucs`, CPU), exportando WAV e MP3.
-- Transcrição por faster-whisper (tiny, base, small; detecção automática/idiomas), exportando TXT e SRT.
-- Players para ouvir instrumental e vocais, botões de download e transcrição copiável.
-- Histórico persistente local, com possibilidade de reabrir resultados anteriores.
-- Pasta de resultados em `~/Downloads/AudioForge-Local/`, com botão para abri-la.
-- Scripts de instalação e inicialização no Ubuntu; atalho no menu de aplicativos.
-- Processamento em fila, mensagens de acompanhamento e tratamento de falhas comuns.
-
-### Limitações conhecidas
-- Executa somente em CPU; em notebooks modestos, Demucs e Whisper podem demorar.
-- A primeira execução das IAs baixa pesos de modelo, exigindo internet e espaço no disco.
-- yt-dlp não garante compatibilidade com qualquer vídeo; vídeos bloqueados e protegidos podem falhar.
-- Não gera vídeo MP4 de karaokê nem letra sincronizada sobre vídeo nesta versão.
-- Isolamento vocal pode deixar artefatos; transcrição de músicas pode ser imprecisa.
-- Testes automatizados cobrem funções básicas, mas os modelos completos precisam ser validados na máquina de destino.
-
-### Próximas versões (propostas)
-- v0.2.0 — Fila de tarefas, botão de cancelar, detecção de arquivos já processados e opções de qualidade.
-- v0.3.0 — Geração de vídeo MP4 com instrumental e sincronização de letras revisáveis.
-- v0.4.0 — Exportação por lote, pastas favoritas e personalização de modelos.
+- Primeira interface local em Gradio (`127.0.0.1:7860`).
+- Importação de arquivo local e link compatível via `yt-dlp`.
+- Extração de WAV com FFmpeg, usando abordagem do script original.
+- Separação de instrumental e vocal com Demucs (WAV + MP3).
+- Transcrição com faster-whisper, TXT e SRT.
+- Histórico local persistente, players e botão para abrir pasta de resultados.
+- Instalação para Ubuntu/Linux, atalho de menu e testes básicos.

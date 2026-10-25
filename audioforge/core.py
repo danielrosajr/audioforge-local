@@ -1,4 +1,4 @@
-"""Motor local: reaproveita yt-dlp e adiciona Demucs, Whisper e histórico."""
+"""Motor local: downloads MP3/MP4/WAV, Demucs, Whisper e histórico."""
 
 from __future__ import annotations
 
@@ -79,14 +79,15 @@ def run_command(command: list[str], status: StatusCallback, *, cwd: Path | None 
         raise AudioForgeError(f"Dependência não encontrada: {command[0]}. Execute o instalador.") from exc
     last_lines: list[str] = []
     assert proc.stdout is not None
-    for line in proc.stdout:
-        text = line.strip()
-        if text:
-            last_lines.append(text)
-            if len(last_lines) > 15:
-                last_lines.pop(0)
-            if any(word in text.lower() for word in ("error", "warning", "track", "100%", "download", "model")):
-                status(text[:210])
+    with proc.stdout:
+        for line in proc.stdout:
+            text = line.strip()
+            if text:
+                last_lines.append(text)
+                if len(last_lines) > 15:
+                    last_lines.pop(0)
+                if any(word in text.lower() for word in ("error", "warning", "track", "100%", "download", "model")):
+                    status(text[:210])
     code = proc.wait()
     if code != 0:
         raise AudioForgeError("Processo externo falhou. Detalhes: " + " | ".join(last_lines[-4:])[-550:])
@@ -168,6 +169,145 @@ def download_youtube_audio(url: str, job_dir: Path, status: StatusCallback) -> t
             raise AudioForgeError("O download não gerou WAV. Verifique a instalação do FFmpeg.")
         output = matches[0]
     return output, str(info.get("title") or "Vídeo do YouTube")
+
+
+VALID_EXPORTS = {"wav", "mp3", "mp4"}
+VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".webm", ".avi", ".mpeg", ".mpg", ".m4v"}
+
+
+def normalize_exports(exports: list[str] | None) -> list[str]:
+    """Não permite valores inesperados vindos do formulário web."""
+    if exports is None:  # Mantém compatibilidade com chamadas da v0.1.0.
+        return ["wav"]
+    if not isinstance(exports, list) or any(not isinstance(x, str) or x not in VALID_EXPORTS for x in exports):
+        raise AudioForgeError("Selecione formatos válidos: WAV, MP3 e/ou MP4.")
+    return [fmt for fmt in ("wav", "mp3", "mp4") if fmt in exports]
+
+
+def media_to_mp3(source: Path, destination: Path, status: StatusCallback) -> None:
+    """MP3 192 kbps direto da origem, sem criar WAV intermediário desnecessário."""
+    if source.resolve() == destination.resolve():
+        return
+    if source.suffix.lower() == ".mp3":
+        shutil.copy2(source, destination)
+    else:
+        status("Convertendo áudio para MP3 (192 kbps)...")
+        run_command([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+            "-i", str(source), "-map", "0:a:0", "-vn", "-c:a", "libmp3lame", "-b:a", "192k",
+            str(destination),
+        ], status)
+    if not destination.is_file() or destination.stat().st_size == 0:
+        raise AudioForgeError("Não foi possível gerar o MP3. A origem pode não ter áudio.")
+
+
+def convert_to_mp4(source: Path, destination: Path, status: StatusCallback) -> None:
+    """Conserva H.264/AAC quando possível; recodifica mídia incompatível."""
+    if source.resolve() == destination.resolve():
+        return
+    if shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None:
+        raise AudioForgeError("FFmpeg e ffprobe são necessários para converter vídeos.")
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "json", str(source)],
+            capture_output=True, text=True, check=True, timeout=45,
+        )
+        streams = json.loads(probe.stdout).get("streams", [])
+    except (subprocess.SubprocessError, ValueError, OSError) as exc:
+        raise AudioForgeError("Não foi possível analisar as faixas de vídeo. Verifique o arquivo original.") from exc
+    video_streams = [s for s in streams if s.get("codec_type") == "video"]
+    audio_streams = [s for s in streams if s.get("codec_type") == "audio"]
+    if not video_streams:
+        raise AudioForgeError("O arquivo não contém vídeo; não é possível gerar MP4.")
+    quick_copy = (video_streams[0].get("codec_name") == "h264" and
+                  (not audio_streams or audio_streams[0].get("codec_name") == "aac"))
+    if quick_copy:
+        status("Gerando MP4 compatível sem recomprimir o vídeo...")
+        if source.suffix.lower() == ".mp4":
+            shutil.copy2(source, destination)
+        else:
+            run_command([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(source),
+                "-map", "0:v:0", "-map", "0:a:0?", "-c", "copy", "-movflags", "+faststart", str(destination),
+            ], status)
+    else:
+        status("Convertendo vídeo para MP4 H.264/AAC (pode demorar na CPU)...")
+        run_command([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(source),
+            "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(destination),
+        ], status)
+    if not destination.is_file() or destination.stat().st_size == 0:
+        raise AudioForgeError("Não foi possível gerar o MP4.")
+
+
+def download_youtube_mp3(url: str, job_dir: Path, status: StatusCallback) -> tuple[Path, str]:
+    """Reutiliza o padrão YoutubeDL + FFmpegExtractAudio do script original."""
+    return _download_youtube(url, job_dir, "mp3", status)
+
+
+def download_youtube_mp4(url: str, job_dir: Path, status: StatusCallback) -> tuple[Path, str]:
+    """Escolhe fluxos MP4 (preferindo H.264 + M4A) e mescla pelo FFmpeg."""
+    return _download_youtube(url, job_dir, "mp4", status)
+
+
+def _download_youtube(url: str, job_dir: Path, output_format: str,
+                      status: StatusCallback) -> tuple[Path, str]:
+    if output_format not in {"mp3", "mp4"}:
+        raise AudioForgeError("Formato de download não suportado.")
+    try:
+        from yt_dlp import YoutubeDL
+    except ImportError as exc:
+        raise AudioForgeError("yt-dlp não instalado. Execute bash install.sh.") from exc
+    if shutil.which("ffmpeg") is None:
+        raise AudioForgeError("FFmpeg não encontrado. Execute bash install.sh.")
+
+    last_progress = [-1]
+
+    def progress_hook(data: dict) -> None:
+        if data.get("status") == "downloading":
+            total = data.get("total_bytes") or data.get("total_bytes_estimate")
+            if total:
+                percent = int(data.get("downloaded_bytes", 0) / total * 100)
+                if percent // 10 != last_progress[0] // 10:
+                    last_progress[0] = percent
+                    status(f"Baixando mídia: {percent}%")
+        elif data.get("status") == "finished":
+            status("Download concluído; finalizando formato selecionado...")
+
+    options: dict = {
+        "outtmpl": str(job_dir / "original.%(ext)s"),
+        "noplaylist": True, "overwrites": True, "quiet": True,
+        "no_warnings": False, "retries": 2, "fragment_retries": 2,
+        "progress_hooks": [progress_hook],
+    }
+    if output_format == "mp3":
+        options.update({
+            "format": "bestaudio/best",
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
+        })
+    else:
+        # Se MP4/H.264 estiver indisponível, ainda tenta streams MP4 compatíveis com o contêiner.
+        # Restringimos a extensão: não renomeamos arquivos WEBM arbitrários para .mp4.
+        options.update({
+            "format": "bv[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/bv[ext=mp4]+ba[ext=m4a]",
+            "merge_output_format": "mp4",
+        })
+    status(f"Obtendo mídia do YouTube para {output_format.upper()}...")
+    try:
+        with YoutubeDL(options) as downloader:
+            info = downloader.extract_info(url, download=True)
+    except Exception as exc:
+        raise AudioForgeError(
+            "Falha ao obter a mídia. O YouTube pode restringir o acesso ou não oferecer "
+            f"um formato MP4 compatível. Atualize o yt-dlp ou envie um arquivo local. Detalhe: {str(exc)[:230]}"
+        ) from exc
+    if not info:
+        raise AudioForgeError("Não foi possível recuperar os metadados do vídeo.")
+    outfile = job_dir / f"original.{output_format}"
+    if not outfile.is_file() or outfile.stat().st_size == 0:
+        raise AudioForgeError(f"O processamento terminou, mas não produziu o arquivo {output_format.upper()} esperado.")
+    return outfile, str(info.get("title") or "Vídeo do YouTube")
 
 
 def separate_audio(source_wav: Path, job_dir: Path, status: StatusCallback) -> tuple[Path, Path, list[Path]]:
@@ -289,9 +429,14 @@ def load_history_item(item_id: str | None) -> dict:
             paths.append(str(path))
     inst = str(root / "instrumental.mp3") if (root / "instrumental.mp3").exists() else None
     vocal = str(root / "voz.mp3") if (root / "voz.mp3").exists() else None
+    original_mp3 = root / "original.mp3"
+    original_wav = root / "original.wav"
+    original_audio = str(original_mp3 if original_mp3.is_file() else original_wav) if (original_mp3.is_file() or original_wav.is_file()) else None
+    original_video = str(root / "original.mp4") if (root / "original.mp4").is_file() else None
     transcript = (root / "transcricao.txt").read_text(encoding="utf-8") if (root / "transcricao.txt").exists() else ""
-    return {"title": entry.get("title", "Arquivo"), "files": paths, "instrumental": inst,
-            "vocals": vocal, "transcript": transcript, "folder": str(root)}
+    return {"title": entry.get("title", "Arquivo"), "files": paths, "original_audio": original_audio,
+            "video": original_video, "instrumental": inst, "vocals": vocal,
+            "transcript": transcript, "folder": str(root)}
 
 
 def process(
@@ -302,47 +447,93 @@ def process(
     model_name: str,
     language: str,
     status: StatusCallback,
+    exports: list[str] | None = None,
 ) -> dict:
-    """Executa operações selecionadas e devolve caminhos para exibição no Gradio."""
+    """Uma entrada, múltiplas saídas. História v0.1 mantida sem migrações."""
     mode, input_value = validate_source(url, local_file)
-    if not separate and not transcribe:
-        status("Nenhuma IA selecionada: será gerado apenas o WAV original.")
+    formats = normalize_exports(exports)
+    if not formats and not separate and not transcribe:
+        raise AudioForgeError("Marque um formato (MP3, MP4 ou WAV) ou uma operação de IA.")
+    if mode == "arquivo" and "mp4" in formats and Path(input_value).suffix.lower() not in VIDEO_EXTENSIONS:
+        raise AudioForgeError("MP4 exige uma entrada com vídeo. Desmarque MP4 para arquivos somente de áudio.")
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     item_id = uuid.uuid4().hex[:12]
     folder = DATA_DIR / item_id
     folder.mkdir(exist_ok=False)
+
+    need_wav = "wav" in formats or separate or transcribe
+    wav_path: Path | None = None
+    video_path: Path | None = None
+    mp3_path: Path | None = None
+    files: list[Path] = []
     try:
         if mode == "url":
-            original_wav, title = download_youtube_audio(input_value, folder, status)
+            if "mp4" in formats:
+                source, title = download_youtube_mp4(input_value, folder, status)
+                video_path = source
+            elif "mp3" in formats and not need_wav:
+                source, title = download_youtube_mp3(input_value, folder, status)
+                mp3_path = source
+            else:
+                source, title = download_youtube_audio(input_value, folder, status)
+                wav_path = source
         else:
             source = Path(input_value)
             title = source.stem
-            original_wav = folder / "original.wav"
             status("Preparando arquivo local...")
-            convert_to_wav(source, original_wav, status)
-        files: list[Path] = [original_wav]
+            if "mp4" in formats:
+                video_path = folder / "original.mp4"
+                convert_to_mp4(source, video_path, status)
+                source = video_path
+
+        if need_wav and wav_path is None:
+            wav_path = folder / "original.wav"
+            convert_to_wav(source, wav_path, status)
+        if "mp3" in formats and mp3_path is None:
+            mp3_path = folder / "original.mp3"
+            media_to_mp3(wav_path if wav_path else source, mp3_path, status)
+
+        if "mp4" in formats and video_path:
+            files.append(video_path)
+        if "wav" in formats and wav_path:
+            files.append(wav_path)
+        if "mp3" in formats and mp3_path:
+            files.append(mp3_path)
+
         instrumental = None
         vocals = None
         transcript = ""
+        if separate or transcribe:
+            assert wav_path is not None
         if separate:
-            instrumental, vocals, extra = separate_audio(original_wav, folder, status)
+            instrumental, vocals, extra = separate_audio(wav_path, folder, status)
             files.extend(extra)
         if transcribe:
-            transcript, extra = transcribe_audio(original_wav, folder, model_name, language, status)
+            transcript, extra = transcribe_audio(wav_path, folder, model_name, language, status)
             files.extend(extra)
+
+        # WAV intermediário pode ocupar centenas de MB. Só guarda se pedido.
+        if wav_path and "wav" not in formats and wav_path.is_file():
+            wav_path.unlink()
+            wav_path = None
+
+        operations = ([fmt.upper() for fmt in formats] +
+                      (["Karaokê"] if separate else []) +
+                      (["Transcrição"] if transcribe else []))
         record = {
-            "id": item_id,
-            "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
-            "title": title,
-            "source": mode,
-            "operations": " + ".join((["Karaokê"] if separate else []) + (["Transcrição"] if transcribe else []) + (["WAV"] if not separate and not transcribe else [])),
+            "id": item_id, "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "title": title, "source": mode, "operations": " + ".join(operations),
             "files": [p.name for p in files],
         }
         save_history(record)
-        status("Tudo concluído! Arquivos disponíveis para reproduzir e baixar.")
-        return {"title": title, "folder": str(folder), "files": [str(p) for p in files],
-                "instrumental": str(instrumental) if instrumental else None,
-                "vocals": str(vocals) if vocals else None, "transcript": transcript}
+        status("Tudo concluído! Os arquivos estão disponíveis no histórico.")
+        return {
+            "title": title, "folder": str(folder), "files": [str(p) for p in files],
+            "original_audio": str(mp3_path or wav_path) if mp3_path or wav_path else None,
+            "video": str(video_path) if video_path else None,
+            "instrumental": str(instrumental) if instrumental else None,
+            "vocals": str(vocals) if vocals else None, "transcript": transcript,
+        }
     except Exception:
-        # Mantém temporários para diagnóstico, mas não polui o histórico.
+        # Preserva a pasta incompleta para diagnóstico, sem poluir o histórico.
         raise

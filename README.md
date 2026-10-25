@@ -1,130 +1,151 @@
 # 🎧 AudioForge Local
 
-**Um estúdio pessoal de áudio e vídeo, 100% local no Ubuntu/Linux.** Extraia WAV, separe voz de instrumental para karaokê e transforme áudio em texto usando modelos de IA que rodam no seu computador.
+**Estúdio pessoal em Python para baixar/converter mídia em WAV, MP3 e MP4, separar voz e instrumental e gerar transcrição.** O aplicativo abre em uma interface visual no navegador, mas o servidor e o processamento ficam **no seu próprio computador**.
 
-> **Versão:** `v0.1.0 — First Cut` · **Tecnologias:** Python 3.10+, Gradio 6, yt-dlp, FFmpeg, Demucs, faster-whisper.
+**Versão atual:** `v0.2.0 — Media Downloader` · **Plataforma principal:** Ubuntu 22.04+ · **Tecnologias:** Python, Gradio 6, FFmpeg, yt-dlp, Demucs e faster-whisper.
 
-## ✨ O que faz
+## ✨ Recursos
 
-| Recurso | Entrada | Saída |
+| Ferramenta | Resultado | Observação |
 |---|---|---|
-| Extrair áudio | Arquivo local ou link compatível | `original.wav` |
-| Separar voz e instrumental | Áudio/vídeo | `instrumental.wav`, `instrumental.mp3`, `voz.wav`, `voz.mp3` |
-| Transcrever | Áudio/vídeo | `transcricao.txt`, `legendas.srt` |
-| Rever projetos | Histórico persistente | Players, texto copiável, links para arquivos |
+| Download/conversão WAV | `original.wav` | Áudio sem compressão; preserva o recurso da v0.1 |
+| **Novo: download/conversão MP3** | `original.mp3` | Áudio padrão em 192 kbps |
+| **Novo: download/conversão MP4** | `original.mp4` | **Vídeo original com áudio**; NÃO é vídeo de karaokê |
+| Separar voz/instrumental | `voz.wav`, `voz.mp3`, `instrumental.wav`, `instrumental.mp3` | Modelos Demucs executados na CPU |
+| Transcrição | `transcricao.txt`, `legendas.srt` | IA faster-whisper na CPU |
+| Histórico | Lista de resultados e players para reabrir | Compatível com o histórico da versão anterior |
+| **Novo: encerrar pela interface** | Para o processo Python local | Confirmação em duas etapas; impede encerrar com tarefa ativa |
 
-- Interface clicável no navegador; **não é um site público**.
-- CPU por padrão (não exige placa NVIDIA).
-- **Sem API paga, sem Supabase, sem criação de conta.** A primeira utilização das IAs requer download dos modelos.
-- As operações de IA rodam localmente; acesso à internet é usado para baixar links autorizados e pesos de modelo.
+Você pode marcar **mais de um formato na mesma tarefa**. Para baixar apenas MP3 ou MP4, **desmarque “Separar voz e instrumental”** se não precisar de karaokê. Escolha a entrada: **arquivo local** ou **link do YouTube para conteúdo autorizado**. O projeto não depende de GitHub Pages, Supabase, conta ou API paga.
 
-## 🚀 Instalação — Ubuntu 22.04+ (uma vez só)
+## 🚀 Instalação (Ubuntu, primeira vez)
 
-1. Baixe o ZIP do projeto e extraia para uma pasta permanente, por exemplo `~/Aplicativos/audioforge-local/`.
-2. Abra essa pasta no gerenciador de arquivos. Clique com o botão direito e escolha **Abrir no terminal**. **Na primeira instalação apenas**, execute:
-
+1. Extraia o pacote para um caminho permanente, por exemplo `~/Aplicativos/audioforge-local/`.
+2. Na pasta extraída, clique com o botão direito → **Abrir no terminal**.
+3. Execute:
    ```bash
    bash install.sh
    ```
+4. A instalação cria o ambiente `.venv`, instala FFmpeg quando necessário, configura bibliotecas e cria o atalho no **menu de aplicativos do Ubuntu**.
+5. Abra **AudioForge Local** pelo menu. A interface será aberta em `http://127.0.0.1:7860`.
 
-3. Aguarde a instalação do FFmpeg (se necessário), ambiente Python e bibliotecas. O script configura um atalho **AudioForge Local** no menu de aplicativos.
-4. Depois disso, abra **AudioForge Local** pelo menu de aplicativos, sem terminal. Como alternativa, execute `start.sh` pelo gerenciador de arquivos (a opção “Executar como programa” pode depender do gerenciador).
-5. Seu navegador abrirá `http://127.0.0.1:7860` automaticamente.
+Na primeira utilização do Demucs ou do Whisper, seus modelos podem ser baixados pela internet. Bibliotecas de IA e modelos podem exigir vários GB livres. No notebook sem GPU dedicada, use **`tiny` ou `base`** para transcrição; separar instrumentos pode levar vários minutos.
 
-> A instalação inicial baixa bibliotecas grandes como PyTorch CPU. Precisa de internet e alguns GB livres no disco. O primeiro uso de Demucs ou Whisper também baixa um modelo. Deixe a pasta do projeto no mesmo lugar depois de instalar: o atalho utiliza esse caminho.
+## 🔄 Atualização da v0.1.0 para v0.2.0 (sem reinstalar tudo)
 
-### Atualização
+**Importante:** encerre o AudioForge antigo antes de substituir qualquer arquivo. Na v0.1.0, se abriu pelo terminal, pressione `Ctrl+C`. Se abriu pelo menu do Ubuntu, feche o processo Python pelo Monitor do Sistema ou reinicie o computador antes de atualizar. **Fechar só a aba do navegador não basta.**
 
-Para atualizar no futuro: substitua os arquivos do projeto pelos da nova versão, **sem apagar a pasta `.venv`**. Quando mudarem dependências, execute `bash install.sh` novamente. O histórico está fora do repositório, em `~/Downloads/AudioForge-Local`.
+1. Descompacte o ZIP da v0.2.0.
+2. Abra a **pasta de instalação antiga** — aquela onde estão `app.py`, `start.sh` e `.venv`.
+3. Copie **o conteúdo interno** do pacote novo (arquivos e subpastas) para a pasta antiga; confirme **substituir/mesclar arquivos**. **Não apague `.venv`.**
+4. Abra o AudioForge pelo mesmo atalho do Ubuntu; o projeto usa as **mesmas dependências** da v0.1.0, então **não precisa executar `install.sh` novamente** se a instalação anterior estava funcionando.
+5. Veja `v0.2.0` no topo da interface.
 
-### Linux: se quiser iniciar manualmente
+Se preferir uma instalação em pasta nova, pode executar `bash install.sh` na nova pasta (reinstala bibliotecas e atualiza o atalho). O histórico é mantido porque fica em outro diretório, não na pasta do projeto.
 
-```bash
-bash start.sh
-```
+## 🧭 Guia rápido
 
-Para interromper o servidor iniciado pelo terminal, pressione `Ctrl+C`. Fechar apenas a aba do navegador não encerra o servidor.
+1. Cole um link autorizado do YouTube **ou** selecione um arquivo local.
+2. Em **Baixar / exportar**, marque `WAV`, `MP3`, `MP4` ou uma combinação.
+3. Marque **Separar voz e instrumental** e/ou **Transcrever**, se quiser aplicar IA.
+4. Clique em **Processar / Baixar** e acompanhe o status. O resultado aparece com player e arquivos para download.
+5. Clique em **Abrir pasta de resultados**, se quiser usar os arquivos fora da interface.
+6. Na aba **Histórico**, carregue um resultado anterior sem processar de novo.
 
-## 🎛️ Como usar
+**Exemplos:**
 
-1. Na aba **Estúdio**, cole uma URL permitida do YouTube **ou** envie um arquivo de áudio/vídeo.
-2. Marque **Separar voz e instrumental** e/ou **Transcrever áudio**. Se deixar as duas desmarcadas, gera apenas WAV.
-3. (Opcional) Em **Opções de transcrição**, escolha idioma e modelo (`tiny`, `base` ou `small`). `base` é a opção padrão.
-4. Clique em **Processar arquivo**. Acompanhe o status e abra o log quando necessário.
-5. Reproduza o instrumental e os vocais, copie a transcrição ou baixe os arquivos.
-6. Use a aba **Histórico** para abrir os resultados antigos.
+- **Baixar música em MP3:** marcar **MP3**; desmarcar **WAV**, **MP4**, **Separar** e **Transcrever**.
+- **Baixar vídeo em MP4:** marcar **MP4**; desmarcar os demais.
+- **Gerar instrumental:** marcar **Separar**; usar WAV opcionalmente. O programa entrega voz + instrumental em WAV/MP3.
+- **Baixar vídeo e também MP3:** marcar **MP4 + MP3**. Se houver um vídeo no link, baixa uma vez e extrai o áudio.
+- **Transcrever e baixar MP3:** marcar **MP3** e **Transcrever**.
 
-### Onde ficam os arquivos?
+**MP4 exige um vídeo**: não funciona com um arquivo que contenha somente áudio. Alguns links não oferecem opções MP4 adequadas, ou podem estar bloqueados por restrições do YouTube; o programa mostra um erro explicativo. Em vídeos locais com codecs incompatíveis, o FFmpeg pode recodificar para H.264/AAC; isso pode ser lento na CPU.
+
+## ⏻ Como encerrar corretamente
+
+**Fechar o Chrome não encerra o AudioForge.** O navegador só exibe a interface; o processo Python continua executando.
+
+- **Abrindo pelo menu do Ubuntu:** role até o rodapé da página → **Encerrar AudioForge** → **Sim, encerrar aplicativo**. O processo é encerrado após mostrar a confirmação, e você pode fechar a aba.
+- **Abrindo por terminal:** pressione `Ctrl+C` no terminal, ou use o mesmo botão de encerramento.
+- **Enquanto processa um arquivo:** o botão impede o encerramento para não perder o trabalho. Espere a tarefa terminar, depois encerre.
+
+Os resultados e o histórico já salvos **não são apagados** pelo encerramento.
+
+## 📂 Onde ficam os arquivos?
+
+Por padrão: **`~/Downloads/AudioForge-Local/`**. Essa pasta é **a mesma da v0.1.0**, sem migração.
 
 ```text
 ~/Downloads/AudioForge-Local/
 ├── historico.json
-├── <id-aleatorio>/
-│   ├── original.wav
-│   ├── instrumental.wav        # caso separação seja escolhida
+├── 123456789abc/
+│   ├── original.mp4        # se MP4 foi escolhido
+│   ├── original.mp3        # se MP3 foi escolhido
+│   ├── original.wav        # se WAV foi escolhido
+│   ├── instrumental.wav    # se separação foi escolhida
 │   ├── instrumental.mp3
 │   ├── voz.wav
 │   ├── voz.mp3
-│   ├── transcricao.txt         # caso transcrição seja escolhida
+│   ├── transcricao.txt     # se transcrição foi escolhida
 │   └── legendas.srt
 └── ...
 ```
 
-Para mudar a pasta, defina a variável de ambiente `AUDIOFORGE_HOME` **antes** de abrir o aplicativo. Para mudar a porta padrão `7860`, use `AUDIOFORGE_PORT`.
-
-## 🧠 Modelos, qualidade e limitações
-
-- **Demucs (`htdemucs`)**: separa voz e acompanhamento em duas faixas. Nem toda voz é removida completamente; instrumentos podem perder qualidade. Opera em CPU e pode demorar muitos minutos dependendo do hardware e da duração.
-- **faster-whisper**: transcrição por IA local. `tiny` é leve/rápido; `base` equilibra velocidade e precisão; `small` pode melhorar resultados, mas aumenta tempo/memória. Letras cantadas e música alta são particularmente difíceis.
-- **yt-dlp**: nem toda URL funciona; mudanças no site, restrições e login podem bloquear operações. Esta versão **não** tenta contornar DRM nem disponibiliza armazenamento online.
-- **Vídeo karaokê em MP4 e legendas sincronizadas na imagem** ainda **não** estão implementados. O modo karaokê atual gera **áudio instrumental**, não vídeo.
-
-## ⚠️ Direitos autorais e plataformas
-
-Utilize somente mídias próprias, licenciadas ou cuja extração/processamento esteja autorizada. O YouTube pode restringir download de conteúdo, inclusive para uso pessoal, salvo quando autorizado pelos próprios termos ou titulares. A disponibilidade técnica do recurso não é garantia de permissão de uso. Consulte [Termos do YouTube](https://www.youtube.com/t/terms).
+Um `original.wav` temporário utilizado apenas pela IA é removido após o processamento quando você não solicita WAV, para economizar espaço. Downloads incompletos podem deixar pastas intermediárias para diagnóstico, mas não aparecem no histórico.
 
 ## 🧰 Solução de problemas
 
-**`FFmpeg não encontrado`** — execute `sudo apt install ffmpeg` e tente novamente.
+| Sintoma | O que fazer |
+|---|---|
+| Erro ao baixar YouTube | Verifique URL e autorização de uso; plataformas alteram formatos e restrições. Para atualizar a biblioteca: `.venv/bin/python -m pip install -U yt-dlp` |
+| MP4 não disponível | O link pode não fornecer fluxo MP4 adequado. Teste outro vídeo autorizado ou arquivo local. |
+| Erro de FFmpeg | Execute `bash install.sh` ou `sudo apt install ffmpeg` |
+| Erro de módulo Python | Na pasta instalada, execute `bash install.sh` |
+| Processamento lento | Vídeos grandes e conversões H.264 consomem CPU. Para transcrição, escolha `tiny`. |
+| Página fecha mas aplicativo ainda ativo | Volte a `http://127.0.0.1:7860` e use **Encerrar AudioForge**; ou `Ctrl+C` no terminal. |
+| Porta 7860 ocupada | Rode `AUDIOFORGE_PORT=7861 bash start.sh` (se estiver iniciando manualmente). |
 
-**`No module named ...`** — verifique se `bash install.sh` concluiu sem erros. Inicie sempre por `start.sh`, que usa o Python da pasta `.venv`.
+## 🔐 Limites e privacidade
 
-**Erro do yt-dlp** — teste um arquivo local para confirmar que as funções de IA funcionam. Depois, atualize a biblioteca com `.venv/bin/python -m pip install -U yt-dlp`. Alguns links podem não funcionar.
+- A interface usa **`127.0.0.1`**; não é publicada na internet.
+- Arquivos locais e transcrições não são enviados a serviços de IA. Ao usar links, o `yt-dlp` acessa o serviço de origem; modelos de IA podem ser baixados da internet na primeira utilização.
+- O aplicativo não remove DRM nem promete funcionar para vídeos bloqueados, privados ou protegidos. **Use somente conteúdo próprio/licenciado ou com download e processamento autorizados**. Consulte os [Termos do YouTube](https://www.youtube.com/t/terms).
+- **MP4 desta versão é o vídeo original**, não a música instrumental sincronizada em vídeo; isso permanece para uma versão futura.
 
-**Demucs/Whisper muito lentos** — isto é esperado em CPU, principalmente com vídeos longos. Para transcrição, selecione `tiny` e teste arquivos curtos primeiro.
-
-**Porta em uso** — execute `AUDIOFORGE_PORT=7861 bash start.sh`.
-
-**Não abre pelo atalho** — reinstale o atalho com `bash install.sh`, a partir da pasta permanente. O inicializador funciona sem terminal apenas depois da instalação.
-
-## 📂 Estrutura do código
+## 🗂️ Estrutura do projeto
 
 ```text
-app.py                 # Interface Gradio
-assets/style.css       # Design da interface
-audioforge/core.py     # yt-dlp, FFmpeg, Demucs, Whisper e histórico
-audioforge/__init__.py # Versão
-install.sh             # Instalador (CPU/Ubuntu) + atalho
-start.sh               # Inicializador de um clique
-requirements.txt       # Dependências do Python
-RELEASE_NOTES.md       # Histórico de versões
-tests/                 # Testes do motor
+app.py                 # Interface, fluxo de progresso e botão de encerramento
+assets/style.css       # Design
+audioforge/core.py    # Download, FFmpeg, Demucs, Whisper e histórico
+audioforge/__init__.py
+install.sh             # Instalação Ubuntu, ambiente virtual e atalho
+start.sh               # Inicialização pelo menu ou terminal
+requirements.txt       # Dependências
+README.md              # Este manual
+RELEASE_NOTES.md       # Notas e roadmap
+GITHUB_PUBLISH.md      # Atualização do repositório pelo navegador
+tests/                 # Testes unitários, simulações e teste leve com FFmpeg
 ```
 
-## 🗺️ Roadmap
+## 🧪 Testes
 
-- **v0.2.0:** fila detalhada, cancelamento real de tarefas, reprocessamento sem novo download.
-- **v0.3.0:** exportação de vídeo MP4 para karaokê, letra revisável sincronizada.
-- **v0.4.0:** processamento em lote, coleções e configuração de modelos.
-
-## 🧪 Testes básicos
+Com a instalação já feita, rode (opcional):
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Eles não fazem download dos modelos; testam os componentes locais e o fluxo básico com simulação de IA. Execute testes reais de música e transcrição na máquina de destino.
+Os testes automatizados não acessam YouTube nem baixam modelos de IA. Os novos fluxos MP3/MP4 são testados com simulação de download, mais uma conversão real de arquivos mínimos pelo FFmpeg. Teste também manualmente uma música/vídeo cujo download seja permitido.
+
+## 🗺️ Roadmap
+
+- **v0.2.1:** melhorias de compatibilidade/download conforme feedback de uso real.
+- **v0.3.0:** fila, cancelamento seguro, preferências de qualidade e reprocessamento sem baixar novamente.
+- **v0.4.0:** criar **vídeo karaokê MP4** com instrumental e opção de exibir legendas/letra sincronizada.
+- **v0.5.0:** processamento em lote e organização de coleções.
 
 ## 📜 Licença
 
-Código disponibilizado sob licença MIT (consulte `LICENSE`). Modelos, fontes de mídia e bibliotecas mantêm suas próprias licenças e termos.
+Código sob licença MIT (`LICENSE`). As dependências, modelos, mídias e seus direitos mantêm as licenças e termos próprios.

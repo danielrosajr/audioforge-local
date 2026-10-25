@@ -17,3 +17,6 @@
 .af-status p { margin:0 !important; }
 .af-footer { text-align:center; padding:25px 8px 10px; font-size:10px; color:var(--body-text-color-subdued); font-weight:650; letter-spacing:.18em; }
 @media(max-width:750px) { .af-hero {padding:26px 22px;} .af-hero h1 em {display:block;margin-top:7px;} .gradio-container {padding:10px !important;} }
+/* v0.2.0 — encerramento explícito e exports */
+.af-shutdown-area { margin-top: 18px !important; border: 1px solid var(--border-color-primary) !important; border-radius: 16px !important; padding: 15px !important; }
+.af-shutdown-area button { min-width: 185px; }
