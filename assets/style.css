@@ -1,0 +1,19 @@
+.gradio-container { max-width: 1190px !important; margin-inline: auto !important; padding: 18px !important; }
+.af-hero { position: relative; overflow: hidden; padding: 35px 38px 34px; margin: 6px 0 20px; border-radius: 24px; color: #fafaff; background: radial-gradient(circle at 90% 0%, rgba(121,90,255,.55), transparent 40%), linear-gradient(125deg, #101326 0%, #21214d 62%, #422063 100%); box-shadow: 0 12px 36px rgba(12,11,25,.15); }
+.af-hero::after { content: '◌'; position:absolute; font-size: 250px; right: -17px; bottom: -100px; color: #ffffff0b; pointer-events:none; }
+.af-topline { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .15em; color: #d9ceff; }
+.af-dot { width:8px; height:8px; background:#4af4bb; display:inline-block; border-radius:50%; box-shadow:0 0 13px #4af4bb; }
+.af-version { font-size: 10px; margin-left: auto; background:#ffffff20; border:1px solid #ffffff30; border-radius:20px; padding:5px 11px; letter-spacing:.08em; }
+.af-hero h1 { margin: 13px 0 6px; font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 850; letter-spacing: -0.06em; line-height: 1.05; }
+.af-hero h1 span { color:#b5a2ff; }
+.af-hero h1 em { font-size:.4em; font-style:normal; font-weight:500; color:#cdc3e8; letter-spacing:0; }
+.af-hero p { color:#dcdcf1; font-size: 15px; max-width:560px; line-height:1.6; margin:12px 0 19px; }
+.af-tags { display:flex; flex-wrap:wrap; gap:8px; }
+.af-tags span { padding:7px 11px; border:1px solid #ffffff2b; border-radius:999px; background:#ffffff12; color:#e9e9ff; font-size:12px; }
+.af-or { text-align:center; font-weight:600; color: var(--body-text-color-subdued); padding:1px 0; margin:0 !important; }
+.af-muted { color: var(--body-text-color-subdued); font-size: 12px; margin: -2px 0 0 !important; }
+.af-action { min-height:51px; font-weight:750 !important; letter-spacing:.02em; }
+.af-status { border:1px solid var(--border-color-primary); border-radius:14px; padding:13px 15px; min-height:60px; background:var(--block-background-fill); }
+.af-status p { margin:0 !important; }
+.af-footer { text-align:center; padding:25px 8px 10px; font-size:10px; color:var(--body-text-color-subdued); font-weight:650; letter-spacing:.18em; }
+@media(max-width:750px) { .af-hero {padding:26px 22px;} .af-hero h1 em {display:block;margin-top:7px;} .gradio-container {padding:10px !important;} }
