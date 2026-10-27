@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import signal
+import queue
+import time
 import shutil
 import subprocess
 import sys
@@ -29,6 +32,22 @@ _lock = threading.Lock()
 
 class AudioForgeError(Exception):
     """Falha esperada que pode ser mostrada na interface."""
+
+class ProcessingCancelled(AudioForgeError):
+    """O usuário solicitou cancelamento; não gravar resultado no histórico."""
+
+_job_context = threading.local()
+
+def _check_cancel():
+    event = getattr(_job_context, 'cancel_event', None)
+    if event is not None and event.is_set():
+        raise ProcessingCancelled('Processamento cancelado pelo usuário.')
+
+def _bitrate() -> int:
+    return getattr(_job_context, 'mp3_bitrate', 192)
+
+def _height() -> int | None:
+    return getattr(_job_context, 'video_height', None)
 
 
 def slug(text: str, max_length: int = 70) -> str:
@@ -62,36 +81,63 @@ def validate_source(url: str, local_file: str | None) -> tuple[str, str]:
 
 
 def run_command(command: list[str], status: StatusCallback, *, cwd: Path | None = None) -> None:
-    """Executa comandos sem shell; encaminha mensagens úteis para a GUI."""
+    """Acompanha stdout sem bloquear; cancelamento encerra subprocessos filhos.
+
+    FFmpeg/Demucs herdam grupo de processo próprio no Linux, permitindo encerrar
+    conversões longas sem matar o servidor do aplicativo.
+    """
+    _check_cancel()
     try:
         proc = subprocess.Popen(
-            command,
-            cwd=str(cwd) if cwd else None,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1,
-            stdin=subprocess.DEVNULL,
+            command, cwd=str(cwd) if cwd else None,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding='utf-8', errors='replace', bufsize=1,
+            stdin=subprocess.DEVNULL, start_new_session=(os.name == 'posix'),
         )
     except FileNotFoundError as exc:
-        raise AudioForgeError(f"Dependência não encontrada: {command[0]}. Execute o instalador.") from exc
+        raise AudioForgeError(f'Dependência não encontrada: {command[0]}. Execute o instalador.') from exc
+    lines: queue.Queue[str] = queue.Queue()
     last_lines: list[str] = []
-    assert proc.stdout is not None
-    with proc.stdout:
-        for line in proc.stdout:
-            text = line.strip()
-            if text:
-                last_lines.append(text)
-                if len(last_lines) > 15:
-                    last_lines.pop(0)
-                if any(word in text.lower() for word in ("error", "warning", "track", "100%", "download", "model")):
-                    status(text[:210])
-    code = proc.wait()
-    if code != 0:
-        raise AudioForgeError("Processo externo falhou. Detalhes: " + " | ".join(last_lines[-4:])[-550:])
-
+    def drain():
+        assert proc.stdout is not None
+        try:
+            for line in proc.stdout:
+                lines.put(line)
+        finally:
+            proc.stdout.close()
+    reader = threading.Thread(target=drain, name='ffmpeg-log', daemon=True)
+    reader.start()
+    try:
+        while proc.poll() is None or not lines.empty() or reader.is_alive():
+            if getattr(_job_context, 'cancel_event', None) is not None and _job_context.cancel_event.is_set():
+                if os.name == 'posix':
+                    os.killpg(proc.pid, signal.SIGTERM)
+                else:
+                    proc.terminate()
+                try:
+                    proc.wait(timeout=3)
+                except subprocess.TimeoutExpired:
+                    if os.name == 'posix':
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    else:
+                        proc.kill()
+                    proc.wait(timeout=3)
+                raise ProcessingCancelled('Operação cancelada.')
+            try: line = lines.get(timeout=0.15).strip()
+            except queue.Empty: continue
+            if line:
+                last_lines.append(line)
+                last_lines[:] = last_lines[-15:]
+                if any(word in line.lower() for word in ('error','warning','track','100%','download','model')):
+                    status(line[:210])
+        code = proc.wait()
+        _check_cancel()
+        if code:
+            raise AudioForgeError('Processo externo falhou. Detalhes: ' + ' | '.join(last_lines[-4:])[-550:])
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
 
 def convert_to_wav(source: Path, destination: Path, status: StatusCallback) -> None:
     if shutil.which("ffmpeg") is None:
@@ -111,7 +157,7 @@ def convert_to_wav(source: Path, destination: Path, status: StatusCallback) -> N
 def wav_to_mp3(source: Path, destination: Path, status: StatusCallback) -> None:
     run_command([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(source),
-        "-codec:a", "libmp3lame", "-b:a", "192k", str(destination),
+        "-codec:a", "libmp3lame", "-b:a", f"{_bitrate()}k", str(destination),
     ], status)
 
 
@@ -127,6 +173,7 @@ def download_youtube_audio(url: str, job_dir: Path, status: StatusCallback) -> t
     last_progress = [-1]
 
     def progress_hook(data: dict) -> None:
+        _check_cancel()
         if data.get("status") == "downloading":
             total = data.get("total_bytes") or data.get("total_bytes_estimate")
             loaded = data.get("downloaded_bytes", 0)
@@ -148,12 +195,15 @@ def download_youtube_audio(url: str, job_dir: Path, status: StatusCallback) -> t
         "retries": 2,
         "fragment_retries": 2,
         "progress_hooks": [progress_hook],
+        "socket_timeout": 15,
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
     }
     status("Conectando ao YouTube com yt-dlp...")
     try:
         with YoutubeDL(options) as downloader:
             info = downloader.extract_info(url, download=True)
+    except ProcessingCancelled:
+        raise
     except Exception as exc:
         raise AudioForgeError(
             "Falha ao obter áudio da URL. O YouTube pode ter restringido o acesso; "
@@ -191,10 +241,10 @@ def media_to_mp3(source: Path, destination: Path, status: StatusCallback) -> Non
     if source.suffix.lower() == ".mp3":
         shutil.copy2(source, destination)
     else:
-        status("Convertendo áudio para MP3 (192 kbps)...")
+        status(f"Convertendo áudio para MP3 ({_bitrate()} kbps)...")
         run_command([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-            "-i", str(source), "-map", "0:a:0", "-vn", "-c:a", "libmp3lame", "-b:a", "192k",
+            "-i", str(source), "-map", "0:a:0", "-vn", "-c:a", "libmp3lame", "-b:a", f"{_bitrate()}k",
             str(destination),
         ], status)
     if not destination.is_file() or destination.stat().st_size == 0:
@@ -209,7 +259,7 @@ def convert_to_mp4(source: Path, destination: Path, status: StatusCallback) -> N
         raise AudioForgeError("FFmpeg e ffprobe são necessários para converter vídeos.")
     try:
         probe = subprocess.run(
-            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name", "-of", "json", str(source)],
+            ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,codec_name,height", "-of", "json", str(source)],
             capture_output=True, text=True, check=True, timeout=45,
         )
         streams = json.loads(probe.stdout).get("streams", [])
@@ -221,7 +271,9 @@ def convert_to_mp4(source: Path, destination: Path, status: StatusCallback) -> N
         raise AudioForgeError("O arquivo não contém vídeo; não é possível gerar MP4.")
     quick_copy = (video_streams[0].get("codec_name") == "h264" and
                   (not audio_streams or audio_streams[0].get("codec_name") == "aac"))
-    if quick_copy:
+    can_copy_size = (_height() is None or (
+        video_streams[0].get('height') is not None and video_streams[0]['height'] <= _height()))
+    if quick_copy and can_copy_size:
         status("Gerando MP4 compatível sem recomprimir o vídeo...")
         if source.suffix.lower() == ".mp4":
             shutil.copy2(source, destination)
@@ -235,7 +287,7 @@ def convert_to_mp4(source: Path, destination: Path, status: StatusCallback) -> N
         run_command([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", str(source),
             "-map", "0:v:0", "-map", "0:a:0?", "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
-            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(destination),
+            "-pix_fmt", "yuv420p", *(["-vf", f"scale=-2:min(ih\\,{_height()})"] if _height() else []), "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(destination),
         ], status)
     if not destination.is_file() or destination.stat().st_size == 0:
         raise AudioForgeError("Não foi possível gerar o MP4.")
@@ -265,6 +317,7 @@ def _download_youtube(url: str, job_dir: Path, output_format: str,
     last_progress = [-1]
 
     def progress_hook(data: dict) -> None:
+        _check_cancel()
         if data.get("status") == "downloading":
             total = data.get("total_bytes") or data.get("total_bytes_estimate")
             if total:
@@ -280,23 +333,30 @@ def _download_youtube(url: str, job_dir: Path, output_format: str,
         "noplaylist": True, "overwrites": True, "quiet": True,
         "no_warnings": False, "retries": 2, "fragment_retries": 2,
         "progress_hooks": [progress_hook],
+        "socket_timeout": 15,
     }
     if output_format == "mp3":
         options.update({
             "format": "bestaudio/best",
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": str(_bitrate())}],
         })
     else:
         # Se MP4/H.264 estiver indisponível, ainda tenta streams MP4 compatíveis com o contêiner.
         # Restringimos a extensão: não renomeamos arquivos WEBM arbitrários para .mp4.
         options.update({
-            "format": "bv[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/bv[ext=mp4]+ba[ext=m4a]",
+            "format": (
+                f"bv[ext=mp4][height<={_height()}]+ba[ext=m4a]/b[ext=mp4][height<={_height()}]"
+                if _height() else
+                "bv[ext=mp4][vcodec^=avc1]+ba[ext=m4a]/b[ext=mp4]/bv[ext=mp4]+ba[ext=m4a]"
+            ),
             "merge_output_format": "mp4",
         })
     status(f"Obtendo mídia do YouTube para {output_format.upper()}...")
     try:
         with YoutubeDL(options) as downloader:
             info = downloader.extract_info(url, download=True)
+    except ProcessingCancelled:
+        raise
     except Exception as exc:
         raise AudioForgeError(
             "Falha ao obter a mídia. O YouTube pode restringir o acesso ou não oferecer "
@@ -368,6 +428,7 @@ def transcribe_audio(source_wav: Path, job_dir: Path, model_name: str, language:
     text_lines: list[str] = []
     subtitle_chunks: list[str] = []
     for index, segment in enumerate(segments, start=1):
+        _check_cancel()
         text = segment.text.strip()
         if not text:
             continue
@@ -380,6 +441,7 @@ def transcribe_audio(source_wav: Path, job_dir: Path, model_name: str, language:
     srt_file = job_dir / "legendas.srt"
     txt_file.write_text(result + ("\n" if result else ""), encoding="utf-8")
     srt_file.write_text("\n".join(subtitle_chunks), encoding="utf-8")
+    _check_cancel()
     if not result:
         status("Nenhuma fala foi reconhecida. Os arquivos de transcrição foram gerados vazios.")
     return result, [txt_file, srt_file]
@@ -448,8 +510,15 @@ def process(
     language: str,
     status: StatusCallback,
     exports: list[str] | None = None,
+    *, cancel_event: threading.Event | None = None,
+    mp3_bitrate: int = 192,
+    video_height: int | None = None,
 ) -> dict:
     """Uma entrada, múltiplas saídas. História v0.1 mantida sem migrações."""
+    _job_context.cancel_event = cancel_event
+    _job_context.mp3_bitrate = int(mp3_bitrate)
+    _job_context.video_height = video_height
+    _check_cancel()
     mode, input_value = validate_source(url, local_file)
     formats = normalize_exports(exports)
     if not formats and not separate and not transcribe:
@@ -486,6 +555,7 @@ def process(
                 convert_to_mp4(source, video_path, status)
                 source = video_path
 
+        _check_cancel()
         if need_wav and wav_path is None:
             wav_path = folder / "original.wav"
             convert_to_wav(source, wav_path, status)
@@ -505,9 +575,11 @@ def process(
         transcript = ""
         if separate or transcribe:
             assert wav_path is not None
+        _check_cancel()
         if separate:
             instrumental, vocals, extra = separate_audio(wav_path, folder, status)
             files.extend(extra)
+        _check_cancel()
         if transcribe:
             transcript, extra = transcribe_audio(wav_path, folder, model_name, language, status)
             files.extend(extra)
@@ -525,6 +597,7 @@ def process(
             "title": title, "source": mode, "operations": " + ".join(operations),
             "files": [p.name for p in files],
         }
+        _check_cancel()
         save_history(record)
         status("Tudo concluído! Os arquivos estão disponíveis no histórico.")
         return {
@@ -535,5 +608,9 @@ def process(
             "vocals": str(vocals) if vocals else None, "transcript": transcript,
         }
     except Exception:
-        # Preserva a pasta incompleta para diagnóstico, sem poluir o histórico.
+        # Preserva pasta incompleta para diagnóstico, sem poluir o histórico.
         raise
+    finally:
+        _job_context.cancel_event = None
+        _job_context.mp3_bitrate = 192
+        _job_context.video_height = None

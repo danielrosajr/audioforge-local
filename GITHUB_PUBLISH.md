@@ -1,63 +1,48 @@
-# Publicar AudioForge Local v0.2.1 no GitHub pelo navegador
+# Publicar AudioForge Local v0.4.0 no GitHub (pelo navegador)
 
-## Dados desta release
+## Repository
 
-| Campo | Valor |
-|---|---|
-| Repositório | `audioforge-local` |
-| Branch | `main` |
-| Versão/tag | `v0.2.1` |
-| Release title | `AudioForge Local v0.2.1 — Smart Startup & Guided Tour` |
-| Commit title | `feat: add single-instance startup and guided onboarding (v0.2.1)` |
-| Description do repositório | `Estúdio local em Python para baixar MP3/MP4/WAV, criar karaokê instrumental e transcrever vídeos com IA.` |
-| GitHub Pages | Não necessário |
+**Nome:** `audioforge-local`  
+**Description:** `Local Python media studio: MP3/MP4/WAV, vocal separation, transcription and bilingual karaoke video editor (PT/EN).`  
+**Topics:** `python`, `gradio`, `karaoke`, `ffmpeg`, `faster-whisper`, `demucs`, `audio-processing`, `video-editor`, `local-first`, `pt-br`  
+**Visibility:** `Public` ou `Private`, a seu critério.  
+**License:** `MIT` (já incluída).  
+**GitHub Pages:** não necessário.
 
-**Descrição estendida do commit (opcional):**
+## Commit
+
+**Título:**
 
 ```text
-Prevent duplicate Python servers when launching AudioForge again.
-Reuse the running local interface and detect port conflicts safely.
-Add a guided, seven-step onboarding tutorial with local persistence.
-Keep all downloads, transcription, karaoke, and history features intact.
+feat: add karaoke video editor, MP4 export and PT-EN localization (v0.4.0)
 ```
 
-## Atualizar usando só o site do GitHub
+**Descrição opcional:**
 
-1. Abra o repositório `audioforge-local` na branch `main` pelo navegador.
-2. Extraia o ZIP da v0.2.1 e envie **o conteúdo interno** da pasta para o repositório (não envie o ZIP como código-fonte).
-3. Atualize `app.py`, `start.sh`, `audioforge/__init__.py`, `assets/style.css`, `README.md`, `RELEASE_NOTES.md` e `GITHUB_PUBLISH.md`.
-4. Adicione os **novos arquivos** `launcher.py`, `audioforge/single_instance.py`, `audioforge/tutorial.py` e `tests/test_startup_tutorial.py`.
-5. Não apague `tests/test_app.py`, `tests/test_core.py` ou `tests/test_exports.py`: seguem válidos e presentes no ZIP.
-6. Clique em **Commit changes** com o título acima. Se o GitHub não aceitar a substituição de um arquivo existente pelo upload, abra esse arquivo e atualize pelo editor web (ícone do lápis). Para vários arquivos, é possível usar o editor web do repositório, quando disponível.
-7. Vá a **Releases → Draft a new release**, crie a tag `v0.2.1` sobre `main` e use o título acima.
-8. Cole a descrição abaixo e publique. Se quiser, anexe `audioforge-local-v0.2.1.zip` à release como asset, sem enviá-lo ao código-fonte.
-
-**Nunca envie:** `.venv/`, `~/Downloads/AudioForge-Local/`, histórico real, modelos baixados, imagens pessoais nem preferências em `~/.config/audioforge-local/`.
-
-## Release description (copiar e colar)
-
-```md
-# AudioForge Local v0.2.1 — Smart Startup & Guided Tour
-
-Esta versão torna o estúdio local mais fácil de abrir, reabrir e aprender a usar.
-
-### ✨ What's New
-- **Single-instance startup:** ao clicar no atalho novamente, AudioForge abre a interface já ativa sem iniciar outro servidor Python.
-- **Safer startup:** detecta processos desconhecidos ocupando a porta, em vez de confundi-los com o aplicativo.
-- **Guided onboarding:** tutorial interativo com 7 etapas, Anterior/Próximo/Pular e indicação dos controles.
-- **First-run memory:** lembra quando o tutorial já foi concluído; permite reabri-lo quando quiser.
-- **Startup diagnostics:** arquivo de log para aberturas pelo menu gráfico.
-
-### ✅ Preserved
-- MP3, MP4, WAV, vocal/instrumental separation, offline speech transcription and local history.
-- Safe shutdown button and Ubuntu launcher.
-
-### 🔄 Upgrade from v0.2.0
-Close the old app using its **Encerrar AudioForge** button. Replace/merge the source files in the installed folder, preserving `.venv/`. Start again from the Ubuntu menu. The first launch shows the guided tutorial.
-
-### 🧪 Testing
-23 automated tests passed, including real FFmpeg conversion and two-process single-instance verification. Browser-based walkthrough interactions still require validation on the user's Ubuntu setup.
-
-### 🗺️ Next
-v0.3.0 — Processing Queue: queue, cancellation, quality preferences and reprocessing.
+```text
+- Add karaoke MP4 rendering with instrumental audio and ASS subtitles
+- Add editable phrase timing, SRT import and AI timing suggestions for PT/EN songs
+- Add local project save/open and configurable karaoke effects
+- Add English UI option and bilingual spotlight walkthrough
+- Preserve processing queue, download formats, transcription, history and smart startup
+- Add FFmpeg smoke tests and update README/release documentation
 ```
+
+## Release
+
+**Tag:** `v0.4.0`  
+**Title:** `AudioForge Local v0.4.0 — Karaoke Video Studio & PT/EN`  
+**Release description:** copie o conteúdo de `RELEASE_NOTES.md`.
+
+## Pelo navegador
+
+1. No repositório `audioforge-local`, atualize os arquivos de código usando **Add file → Upload files** para arquivos novos, e edição/substituição dos existentes quando necessário. Garanta que a estrutura de `audioforge/`, `assets/` e `tests/` permaneça idêntica à do ZIP.
+2. Faça commit com a mensagem acima na `main`.
+3. Em **Releases → Draft a new release**, crie a tag `v0.4.0` sobre `main`, cole o título e as notas da release.
+4. Anexe o ZIP como asset de release se quiser facilitar o backup/download de futuras instalações.
+
+**Não suba** `.venv/`, `__pycache__/`, dados do navegador, pastas de resultados, `historico.json`, vídeos/músicas de terceiros, arquivos temporários nem modelos de IA baixados. O `.gitignore` cobre a maioria desses casos, mas uploads pelo navegador devem ser conferidos manualmente.
+
+## Atualização no Ubuntu
+
+O repositório é um backup do código, não um instalador automático. Para atualizar o aplicativo que já está funcionando no seu notebook, encerre a versão anterior, substitua os arquivos de código e mantenha `.venv` e `~/Downloads/AudioForge-Local/`. Consulte `README.md`.

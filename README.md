@@ -1,182 +1,129 @@
-# 🎧 AudioForge Local
+# AudioForge Local
 
-**Estúdio pessoal em Python para baixar/converter mídia em WAV, MP3 e MP4, separar voz e instrumental e gerar transcrição.** O aplicativo abre em uma interface visual no navegador, mas o servidor e o processamento ficam **no seu próprio computador**.
+**A local-first Python media studio** / **Estúdio pessoal de mídia em Python**.
 
-**Versão atual:** `v0.2.1 — Smart Startup & Guided Tour` · **Plataforma principal:** Ubuntu 22.04+ · **Tecnologias:** Python, Gradio 6, FFmpeg, yt-dlp, Demucs e faster-whisper.
+**Versão:** `v0.4.0 — Karaoke Video Studio & PT/EN`  
+**Interface:** Português (Brasil) 🇧🇷 / English 🇺🇸  
+**Execução:** Ubuntu/Linux, sem servidor público e sem APIs pagas de IA.
 
-## ✨ Recursos
+## Novidades da v0.4.0
 
-| Ferramenta | Resultado | Observação |
-|---|---|---|
-| Download/conversão WAV | `original.wav` | Áudio sem compressão; preserva o recurso da v0.1 |
-| **Novo: download/conversão MP3** | `original.mp3` | Áudio padrão em 192 kbps |
-| **Novo: download/conversão MP4** | `original.mp4` | **Vídeo original com áudio**; NÃO é vídeo de karaokê |
-| Separar voz/instrumental | `voz.wav`, `voz.mp3`, `instrumental.wav`, `instrumental.mp3` | Modelos Demucs executados na CPU |
-| Transcrição | `transcricao.txt`, `legendas.srt` | IA faster-whisper na CPU |
-| Histórico | Lista de resultados e players para reabrir | Compatível com o histórico da versão anterior |
-| Encerrar pela interface | Para o processo Python local | Confirmação em duas etapas; impede encerrar com tarefa ativa |
-| **Novo: instância única** | Reabrir a interface pelo mesmo atalho | Evita dois servidores na mesma porta e verifica a instância ativa |
-| **Novo: tutorial guiado** | 7 etapas navegáveis | Passos Anterior/Próximo/Pular; você pode reabrir depois |
+- 🎤 **Karaoke Video Studio**: combina **vídeo MP4** e **faixa instrumental** em um novo MP4 com letras sobrepostas.
+- 📝 **Editor de frases**: cole uma letra (uma frase por linha), importe SRT, ou peça sugestões de texto e tempos ao faster-whisper. **Revise as frases**: a IA pode errar letras cantadas.
+- ⏱️ **Tabela editável**: início, fim e conteúdo de cada frase; linha do tempo visual para conferir o posicionamento antes da exportação.
+- 🌈 **Efeitos**: cor de destaque, posição superior/central/inferior, tamanho da fonte e preenchimento progressivo das palavras por meio de legendas **ASS**. O preenchimento é **aproximado** dentro de cada frase, não um alinhamento fonético preciso palavra por palavra.
+- 💾 **Projetos locais reutilizáveis**: salve, reabra e continue a edição posteriormente. Arquivos enviados pelo navegador são copiados para uma pasta persistente ao salvar o projeto.
+- 🌎 **Interface PT-BR/EN**: seletor de idioma no topo, preferência salva em `~/.config/audioforge-local/preferences.json`. O tutorial spotlight também possui orientações em inglês e novas etapas do editor. Alguns logs legados do motor continuam em português.
+- 🎼 **Música PT/EN**: idioma automático, português ou inglês para sugestões de transcrição via faster-whisper. A separação instrumental Demucs independe do idioma.
 
-Você pode marcar **mais de um formato na mesma tarefa**. Para baixar apenas MP3 ou MP4, **desmarque “Separar voz e instrumental”** se não precisar de karaokê. Escolha a entrada: **arquivo local** ou **link do YouTube para conteúdo autorizado**. O projeto não depende de GitHub Pages, Supabase, conta ou API paga.
+Permanecem as funções da v0.3: conversão/download de links autorizados e arquivos em **MP3/MP4/WAV**, fila FIFO, cancelamento de trabalhos, Demucs para separar voz/instrumental, faster-whisper para TXT/SRT, histórico e abertura em instância única. A renderização de karaokê espera a fila estar vazia para evitar disputar CPU com outro processamento.
 
-## 🚀 Instalação (Ubuntu, primeira vez)
+## Requisitos
 
-1. Extraia o pacote para um caminho permanente, por exemplo `~/Aplicativos/audioforge-local/`.
-2. Na pasta extraída, clique com o botão direito → **Abrir no terminal**.
-3. Execute:
+- Ubuntu/Linux e **Python 3.10+**.
+- `ffmpeg` e `ffprobe` instalados; o FFmpeg deve ter filtro `ass` (libass). Teste com `ffmpeg -filters | grep ' ass '`.
+- Internet no primeiro uso para instalar dependências/baixar modelos; uso de arquivo local e inferência de IA não exigem servidor remoto depois que os modelos estiverem disponíveis.
+- A edição e exportação usam CPU; vídeos longos podem ser lentos em notebooks sem GPU e precisam de espaço em disco.
+
+## Instalação nova
+
+1. Extraia o arquivo ZIP numa pasta **permanente** (por exemplo `~/Aplicativos/audioforge-local`).
+2. Abra um terminal nessa pasta e execute **uma vez**:
+
    ```bash
    bash install.sh
    ```
-4. A instalação cria o ambiente `.venv`, instala FFmpeg quando necessário, configura bibliotecas e cria o atalho no **menu de aplicativos do Ubuntu**.
-5. Abra **AudioForge Local** pelo menu. A interface será aberta em `http://127.0.0.1:7860`.
 
-Na primeira utilização do Demucs ou do Whisper, seus modelos podem ser baixados pela internet. Bibliotecas de IA e modelos podem exigir vários GB livres. No notebook sem GPU dedicada, use **`tiny` ou `base`** para transcrição; separar instrumentos pode levar vários minutos.
+3. Depois procure **AudioForge Local** no menu de aplicativos do Ubuntu e clique. O Gradio abrirá no Chrome ou navegador padrão em `http://127.0.0.1:7860`.
 
-## 🔄 Atualizar da v0.2.0 para v0.2.1 (sem perder histórico)
+## Atualizar v0.3.0 → v0.4.0
 
-1. **Encerre primeiro a versão v0.2.0:** no rodapé, clique **Encerrar AudioForge → Sim, encerrar aplicativo**. **Fechar só o Chrome não encerra**. Caso esteja no terminal, pode usar `Ctrl+C`.
-2. Descompacte `audioforge-local-v0.2.1.zip`.
-3. Abra a **pasta onde o AudioForge está instalado**: a que contém `app.py`, `start.sh` e `.venv/`.
-4. Copie **o conteúdo INTERNO** da pasta extraída `audioforge-local-v0.2.1` para **dentro** da pasta já instalada, mesclando as subpastas e substituindo os arquivos com mesmo nome. Isso inclui os novos **`launcher.py` e `audioforge/single_instance.py` e `audioforge/tutorial.py`**.
-5. **Não apague `.venv/`** e **não apague `~/Downloads/AudioForge-Local/`**. Não é preciso rodar `install.sh` novamente, pois não alteramos as bibliotecas.
-6. Abra **AudioForge Local** pelo mesmo atalho do menu do Ubuntu. Confirme a indicação **v0.2.1** na parte superior.
+1. Na v0.3.0, clique em **Encerrar AudioForge** e confirme. **Fechar apenas a aba do Chrome não encerra o servidor.**
+2. Extraia o novo ZIP. Copie o **conteúdo** de `audioforge-local-v0.4.0/` para a pasta **já instalada**, sobrescrevendo `app.py`, subpastas `audioforge/`, `assets/`, testes e documentação.
+3. **Não apague `.venv` e nem `~/Downloads/AudioForge-Local/`**. A pasta de resultados contém seu histórico e as mídias. Como não entraram dependências obrigatórias novas, normalmente não precisa reinstalar; se faltar algum pacote, execute `bash install.sh` na pasta instalada.
+4. Abra o atalho existente pelo menu Ubuntu e confira a versão `v0.4.0`.
 
-Se você criou uma pasta de instalação *nova*, e não substituiu a antiga, execute `bash install.sh` na pasta nova para atualizar o atalho; nesse caso há nova instalação de dependências. Para saber para onde o atalho aponta: `grep '^Exec=' ~/.local/share/applications/audioforge-local.desktop`.
+Para localizar a pasta usada pelo atalho:
 
-**Atenção:** se copiar os arquivos enquanto a v0.2.0 estiver aberta, ela não receberá o bloqueio de instância única retroativamente. Encerre a versão antiga e inicie a nova após copiar.
-
-### Como iniciar no dia a dia
-
-- Procure **AudioForge Local** no menu de aplicativos do Ubuntu, ou clique no mesmo atalho novamente.
-- **Se já estiver aberto, o atalho apenas abre outra aba com a mesma interface** (não inicia outro Python nem baixa modelos novamente).
-- Se tiver fechado somente a aba, clique no atalho para reabrir.
-- Para realmente desligar: **Encerrar AudioForge** no rodapé, ou `Ctrl+C` no terminal que o executa.
-- Se a porta `7860` estiver ocupada por um programa **não reconhecido**, o AudioForge não tentará assumir esse programa: exibirá aviso e deixará instruções no log.
-
-### 🧭 Tutorial guiado
-
-Na **primeira execução da v0.2.1** o tutorial aparece automaticamente, com sete etapas:
-
-1. Selecionar vídeo/áudio ou colar link.
-2. Escolher WAV, MP3 ou MP4.
-3. Ativar (ou desativar) karaokê e transcrição.
-4. Iniciar o processamento.
-5. Ouvir, copiar texto e baixar arquivos.
-6. Reabrir trabalhos no histórico.
-7. Encerrar com segurança.
-
-Use **Próximo →**, **← Anterior** ou **Pular tutorial**. As áreas correspondentes ganham destaque na interface e a aba **Histórico** é selecionada quando você chega à sua etapa. Ao terminar/pular, a preferência fica salva **somente no computador**, em `~/.config/audioforge-local/preferences.json`. O botão **Abrir tutorial guiado**, logo abaixo do cabeçalho, permite refazer a visita quantas vezes quiser.
-
-## 🧭 Guia rápido
-
-1. Cole um link autorizado do YouTube **ou** selecione um arquivo local.
-2. Em **Baixar / exportar**, marque `WAV`, `MP3`, `MP4` ou uma combinação.
-3. Marque **Separar voz e instrumental** e/ou **Transcrever**, se quiser aplicar IA.
-4. Clique em **Processar / Baixar** e acompanhe o status. O resultado aparece com player e arquivos para download.
-5. Clique em **Abrir pasta de resultados**, se quiser usar os arquivos fora da interface.
-6. Na aba **Histórico**, carregue um resultado anterior sem processar de novo.
-
-**Exemplos:**
-
-- **Baixar música em MP3:** marcar **MP3**; desmarcar **WAV**, **MP4**, **Separar** e **Transcrever**.
-- **Baixar vídeo em MP4:** marcar **MP4**; desmarcar os demais.
-- **Gerar instrumental:** marcar **Separar**; usar WAV opcionalmente. O programa entrega voz + instrumental em WAV/MP3.
-- **Baixar vídeo e também MP3:** marcar **MP4 + MP3**. Se houver um vídeo no link, baixa uma vez e extrai o áudio.
-- **Transcrever e baixar MP3:** marcar **MP3** e **Transcrever**.
-
-**MP4 exige um vídeo**: não funciona com um arquivo que contenha somente áudio. Alguns links não oferecem opções MP4 adequadas, ou podem estar bloqueados por restrições do YouTube; o programa mostra um erro explicativo. Em vídeos locais com codecs incompatíveis, o FFmpeg pode recodificar para H.264/AAC; isso pode ser lento na CPU.
-
-## ⏻ Como encerrar corretamente
-
-**Fechar o Chrome não encerra o AudioForge.** O navegador só exibe a interface; o processo Python continua executando. Na v0.2.1, clicar no atalho novamente reconhece o processo já aberto e reabre a interface.
-
-- **Abrindo pelo menu do Ubuntu:** role até o rodapé da página → **Encerrar AudioForge** → **Sim, encerrar aplicativo**. O processo é encerrado após mostrar a confirmação, e você pode fechar a aba.
-- **Abrindo por terminal:** pressione `Ctrl+C` no terminal, ou use o mesmo botão de encerramento.
-- **Enquanto processa um arquivo:** o botão impede o encerramento para não perder o trabalho. Espere a tarefa terminar, depois encerre.
-
-Os resultados e o histórico já salvos **não são apagados** pelo encerramento.
-
-## 📂 Onde ficam os arquivos?
-
-Por padrão: **`~/Downloads/AudioForge-Local/`**. Essa pasta é **a mesma da v0.1.0**, sem migração.
-
-```text
-~/Downloads/AudioForge-Local/
-├── historico.json
-├── 123456789abc/
-│   ├── original.mp4        # se MP4 foi escolhido
-│   ├── original.mp3        # se MP3 foi escolhido
-│   ├── original.wav        # se WAV foi escolhido
-│   ├── instrumental.wav    # se separação foi escolhida
-│   ├── instrumental.mp3
-│   ├── voz.wav
-│   ├── voz.mp3
-│   ├── transcricao.txt     # se transcrição foi escolhida
-│   └── legendas.srt
-└── ...
+```bash
+grep '^Path=' ~/.local/share/applications/audioforge-local.desktop
 ```
 
-Um `original.wav` temporário utilizado apenas pela IA é removido após o processamento quando você não solicita WAV, para economizar espaço. Downloads incompletos podem deixar pastas intermediárias para diagnóstico, mas não aparecem no histórico.
+Se extrair o ZIP em uma **pasta diferente** sem copiar para a instalação existente, o atalho continuará abrindo a versão antiga.
 
-## 🧰 Solução de problemas
+## Fluxo recomendado para criar um vídeo de karaokê
 
-| Sintoma | O que fazer |
-|---|---|
-| Erro ao baixar YouTube | Verifique URL e autorização de uso; plataformas alteram formatos e restrições. Para atualizar a biblioteca: `.venv/bin/python -m pip install -U yt-dlp` |
-| MP4 não disponível | O link pode não fornecer fluxo MP4 adequado. Teste outro vídeo autorizado ou arquivo local. |
-| Erro de FFmpeg | Execute `bash install.sh` ou `sudo apt install ffmpeg` |
-| Erro de módulo Python | Na pasta instalada, execute `bash install.sh` |
-| Processamento lento | Vídeos grandes e conversões H.264 consomem CPU. Para transcrição, escolha `tiny`. |
-| Página fecha mas aplicativo ainda ativo | Volte a `http://127.0.0.1:7860` e use **Encerrar AudioForge**; ou `Ctrl+C` no terminal. |
-| Porta 7860 ocupada | Se for uma **versão antiga**, encerre-a antes de iniciar v0.2.1. Se for outro programa, use `AUDIOFORGE_PORT=7861 bash start.sh` (ainda haverá apenas uma instância AudioForge por usuário). |
-| Clique no atalho e nada apareceu | Consulte `~/.cache/audioforge-local/launcher.log` (inicialização pelo menu gráfico). Em terminal, `bash start.sh` mostra mensagens diretamente. |
-| Interface já estava aberta | Isso é esperado. O novo atalho reabre `http://127.0.0.1:7860` sem criar outro servidor. |
-| Tutorial não aparece | Clique em **Abrir tutorial guiado**. A conclusão anterior é lembrada em `~/.config/audioforge-local/preferences.json`. |
+1. Na aba **Estúdio / Studio**, escolha vídeo local ou link autorizado. Selecione **MP4** e marque **Separar voz e instrumental**. Adicione à fila.
+2. Aguarde a conclusão; clique em **Ver resultado** ou vá ao **Histórico**.
+3. Abra **Karaoke Video** e escolha esse resultado em **Usar mídia do histórico**. Alternativamente, selecione arquivos independentes de vídeo e instrumental pelos botões de upload.
+4. Em **Letra**, cole uma frase por linha ou importe um `.srt`. Se houver SRT no processamento do Histórico e o campo Letra estiver vazio, o editor pode carregá-lo automaticamente.
+5. Clique **Distribuir tempos** para gerar uma estimativa inicial **uniforme** conforme a duração; **isso NÃO sincroniza de verdade**. Ou use **Sugerir letra/tempos com Whisper** para estimar frases a partir do vocal separado (quando existir), senão a partir do vídeo original. Escolha o idioma da música (`Auto`, `Português`, `English`) e o modelo (`tiny`, `base`, `small`). Os resultados da IA substituem o texto da tabela; confira diferenças para a letra original.
+6. Edite a **tabela de início/fim e letras**. Clique em **Atualizar linha do tempo** para conferir a distribuição visual. Frases sobrepostas podem aparecer simultaneamente; revise conflitos.
+7. Escolha cor, posição da legenda, tamanho da fonte e destaque progressivo aproximado. Clique em **Salvar projeto** e depois em **Exportar MP4 de karaokê**.
+8. O editor gera `karaoke.mp4` e `karaoke.ass`. Assista no player e faça ajustes quando necessário. Você pode reabrir o projeto pelo seletor **Reabrir projeto salvo** e exportar de novo.
 
-## 🔐 Limites e privacidade
+### Onde ficam os arquivos
 
-- A interface usa **`127.0.0.1`**; não é publicada na internet. O processo atual mantém apenas um identificador e uma porta de controle **também em `127.0.0.1`**, para a reabertura segura.
-- Arquivos locais e transcrições não são enviados a serviços de IA. Ao usar links, o `yt-dlp` acessa o serviço de origem; modelos de IA podem ser baixados da internet na primeira utilização.
-- O aplicativo não remove DRM nem promete funcionar para vídeos bloqueados, privados ou protegidos. **Use somente conteúdo próprio/licenciado ou com download e processamento autorizados**. Consulte os [Termos do YouTube](https://www.youtube.com/t/terms).
-- **MP4 desta versão é o vídeo original**, não a música instrumental sincronizada em vídeo; isso permanece para uma versão futura.
+- Resultados do estúdio e histórico: `~/Downloads/AudioForge-Local/`.
+- Projetos de karaokê: `~/Downloads/AudioForge-Local/karaoke-projects/<id>/`.
+- Cada projeto tem `project.json` e, após a exportação, `karaoke.ass` e `karaoke.mp4`.
+- Se um vídeo/instrumental foi carregado por upload, ao salvar o projeto ele é copiado para a pasta do projeto para continuar disponível depois. Isso pode usar espaço significativo. Se vier do histórico, o arquivo já é persistente e não é duplicado.
+- Preferência de idioma: `~/.config/audioforge-local/preferences.json`. O tutorial registra a exibição no armazenamento do navegador.
 
-## 🗂️ Estrutura do projeto
+### Exemplo de letra (sem timestamps)
 
 ```text
-app.py                 # Interface, tutoriais e botão de encerramento
-launcher.py            # Inicialização leve com proteção de instância única
-assets/style.css       # Design
-audioforge/core.py    # Download, FFmpeg, Demucs, Whisper e histórico
-audioforge/single_instance.py # Bloqueio, status e reabertura segura
-audioforge/tutorial.py        # Etapas e preferências locais do tutorial
-audioforge/__init__.py
-install.sh             # Instalação Ubuntu, ambiente virtual e atalho
-start.sh               # Inicialização pelo menu ou terminal
-requirements.txt       # Dependências
-README.md              # Este manual
-RELEASE_NOTES.md       # Notas e roadmap
-GITHUB_PUBLISH.md      # Atualização do repositório pelo navegador
-tests/                 # Testes unitários, simulações e teste leve com FFmpeg
+Primeira frase da música
+Segunda frase da música
+Third verse in English
 ```
 
-## 🧪 Testes
+**Importante:** texto de entrada no editor não é tradução automática. Música bilíngue também pode ser editada manualmente; Whisper com auto-detecção em faixas misturadas pode precisar de revisão adicional.
 
-Com a instalação já feita, rode (opcional):
+## Privacidade, permissões e limites
+
+- A interface escuta apenas `127.0.0.1`; os modelos de IA rodam no computador sem API paga. Links online e download de modelos exigem internet.
+- Use somente material cujo download e edição sejam autorizados. Links do YouTube dependem das permissões e restrições da plataforma e podem falhar.
+- A **exportação é real**, mas o editor de v0.4.0 **não arrasta palavras individualmente** nem faz sincronização perfeita da letra fornecida. A sincronização é ajustada **por frase** em uma tabela; o preenchimento por palavra distribui o tempo proporcionalmente ao comprimento da palavra (efeito visual ASS).
+- A **prévia com letra sobre vídeo** aparece após renderizar o MP4. A linha do tempo oferece uma prévia estrutural antes de renderizar, não uma sobreposição em tempo real.
+- O editor v0.4.0 renderiza um MP4 por vez, sem suporte a cancelar a renderização individualmente. O botão de desligar é bloqueado enquanto a exportação estiver em curso. Aguarde o fim antes de encerrar.
+- Para vídeos longos, a codificação H.264 com FFmpeg pode levar bastante tempo na CPU.
+- Projetos ficam locais; não compartilhe a pasta de resultados nem envie vídeos, músicas, logs ou arquivos privados para o GitHub.
+
+## Encerrar e reabrir
+
+Clique **Encerrar AudioForge** → confirmação. Para abrir de novo, use **AudioForge Local** no menu Ubuntu. Se já existir uma instância, o atalho deverá reabrir a interface existente, evitando conflito de porta.
+
+## Testes
 
 ```bash
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-Os testes automatizados não acessam YouTube nem baixam modelos de IA. Nesta versão, há **23 testes automatizados**, incluindo inicialização concorrente em dois processos, identificação de porta ocupada, salvamento do tutorial, conversão real com FFmpeg e teste leve da interface. **A sequência visual dos botões do tutorial ainda deve ser conferida no Chrome do seu Ubuntu**, junto com uma mídia autorizada.
+O projeto inclui testes de exportação FFmpeg de verdade com vídeo sintético sem material protegido, além de testes de compatibilidade da fila, histórico, idioma e ASS. Não requer downloads reais nem a execução de modelos de IA pesados para os testes padrão.
 
-## 🗺️ Roadmap
+## English quick start
 
-- **v0.2.1 (atual):** instância única, reabrir pelo atalho e tutorial guiado.
-- **v0.3.0:** fila, cancelamento seguro, preferências de qualidade e reprocessamento sem baixar novamente.
-- **v0.4.0:** criar **vídeo karaokê MP4** com instrumental e opção de exibir legendas/letra sincronizada.
-- **v0.5.0:** processamento em lote e organização de coleções.
+1. Install with `bash install.sh` (once), then launch **AudioForge Local** from your Ubuntu application menu.
+2. Switch **UI Language → English** at the top.
+3. In **Studio**, process a video with **MP4** + **Separate vocals and instrumental**.
+4. In **Karaoke Video**, choose that History item, import or type lyrics, select **Song Language → English** (or Auto), and generate estimated phrase timing.
+5. Review each row in the timing table, **Save project**, then **Export karaoke MP4**. The result is a new video with the original video's visuals, instrumental audio and karaoke subtitles.
+6. **Shut down AudioForge** when finished. Closing the browser tab alone will not stop the local Python service.
 
-## 📜 Licença
+**Caution:** Singing recognition can be inaccurate. Word highlighting is approximate; manually adjust phrase timing for best results. Only use authorized media.
 
-Código sob licença MIT (`LICENSE`). As dependências, modelos, mídias e seus direitos mantêm as licenças e termos próprios.
+## Roadmap
+
+- ✅ **v0.3.0** — Processing Queue & Spotlight Tour.
+- ✅ **v0.4.0** — Karaoke Video Studio, editable phrase timing, projects, MP4 export and PT/EN.
+- ⏭️ **v0.4.1** — Polish: richer live preview and more consistent translations in legacy logs.
+- 💡 **v0.5.0** — Optional forced-alignment/word-level sync, draggable timeline and batch library (future study; not yet implemented).
+
+## Tecnologias / Technologies
+
+Python · Gradio 6 · yt-dlp · FFmpeg/libass · Demucs · faster-whisper
+
+## Licença / License
+
+MIT — see [`LICENSE`](LICENSE).
